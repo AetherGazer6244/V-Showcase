@@ -278,6 +278,30 @@ body {
 }
 .error-banner.is-fading { opacity: 0; }
 
+/* ============ 方向标记(orient-*)通用规则 ============
+ * 图床转存剥 EXIF,少数图片横躺存储;ORIENTATIONS(src/site/orientations.ts)
+ * 记录显示时应旋转的角度,由 useOrientation() 输出 orient-90/180/270 类名。
+ * 约定:旋转类挂在 .img-box 包裹层上(盒子有确定尺寸,size 容器查询
+ * 提供 100cqw/100cqh,让 90/270 的图片以「对调宽高 + 居中旋转」铺满盒子,
+ * cover 裁切在旋转后的坐标系里进行,视觉与原生横竖一致)。
+ * 180° 无需对调宽高,原位旋转即可。 */
+.img-box.orient-90,
+.img-box.orient-180,
+.img-box.orient-270 {
+  container-type: size;
+}
+.img-box.orient-180 > img { transform: rotate(180deg); }
+.img-box.orient-90 > img,
+.img-box.orient-270 > img {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100cqh;   /* 盒高 → 旋转后的横向跨度 */
+  height: 100cqw;  /* 盒宽 → 旋转后的纵向跨度 */
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+.img-box.orient-270 > img { transform: translate(-50%, -50%) rotate(270deg); }
+
 /* ============ 404 页 ============ */
 .site-header {
   flex: 1;

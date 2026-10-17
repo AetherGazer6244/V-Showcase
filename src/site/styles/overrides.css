@@ -34,7 +34,7 @@
 
   .gallery-main { padding: 0 16px 40px; }
   .gallery-grid { gap: 16px; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
-  .gallery-card img { height: 160px; }
+  .gallery-card .cover-box { height: 160px; }
   .gallery-card-meta { padding: 12px 14px; }
   .gallery-card-title { font-size: 0.95rem; }
 

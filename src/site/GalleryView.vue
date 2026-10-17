@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { loadImages } from '@/shared/apiClient';
 import type { Image } from '@/shared/types';
-import { useAlbums, useTags, useFocal, useLightbox } from './composables';
+import { useAlbums, useTags, useFocal, useOrientation, useLightbox } from './composables';
 import { useLikes } from './likes';
 import { useFavorites } from './favorites';
 import { formatInt } from '@/shared/utils';
@@ -26,6 +26,7 @@ const loadedCovers = ref(new Set<string>());
 const albums = useAlbums(() => images.value);
 const { tagsOf, albumTags } = useTags();
 const { focalStyle } = useFocal();
+const { orientClass, orientationOf } = useOrientation();
 const lb = useLightbox();
 const { ready: likesReady, likeCount, isLiked, toggleLike } = useLikes();
 const { isFav, toggleFav } = useFavorites();
@@ -81,6 +82,24 @@ const resultText = computed(() => {
   if (!q) return albums.value.length > 0 ? `共 ${albums.value.length} 个图集` : '';
   return `匹配 ${filtered.value.length} / ${albums.value.length}`;
 });
+
+/** 瀑布流内容盒类:有宽高数据时预留高宽比 + 挂方向旋转;
+ *  没有数据(兜底图)回落为图片自然尺寸,不做旋转(盒子尺寸未知,无法换算) */
+function masonryBoxClass(img: Image): string {
+  const has = !!(img.width && img.height);
+  return has ? `has-ar ${orientClass(img.url)}`.trim() : '';
+}
+
+/** 瀑布流内容盒宽高比 = 显示姿态(90/270 时横竖对调),加载前即可占位,消除抖动 */
+function masonryBoxStyle(img: Image): Record<string, string> {
+  const w = img.width || 0;
+  const h = img.height || 0;
+  if (!w || !h) return {};
+  const o = orientationOf(img.url);
+  const bw = o === 90 || o === 270 ? h : w;
+  const bh = o === 90 || o === 270 ? w : h;
+  return { aspectRatio: `${bw} / ${bh}` };
+}
 
 function openAlbum(index: number) {
   const album = filtered.value[index];
@@ -189,16 +208,18 @@ onMounted(async () => {
         @click="openAlbum(i)"
         @keydown="onCardKeydown($event, i)"
       >
-        <img
-          :src="album.cover"
-          :alt="album.name"
-          :style="focalStyle(album.cover)"
-          :class="{ 'is-loaded': loadedCovers.has(album.cover) }"
-          loading="lazy"
-          decoding="async"
-          @load="onCoverLoad(album.cover)"
-          @error="onCoverLoad(album.cover)"
-        >
+        <div class="img-box cover-box" :class="orientClass(album.cover)">
+          <img
+            :src="album.cover"
+            :alt="album.name"
+            :style="focalStyle(album.cover)"
+            :class="{ 'is-loaded': loadedCovers.has(album.cover) }"
+            loading="lazy"
+            decoding="async"
+            @load="onCoverLoad(album.cover)"
+            @error="onCoverLoad(album.cover)"
+          >
+        </div>
         <div class="gallery-card-meta">
           <span class="gallery-card-title">{{ album.name }}</span>
           <span class="gallery-card-count">{{ album.count }}</span>
@@ -232,15 +253,17 @@ onMounted(async () => {
         @click="openMasonry(i)"
         @keydown="onMasonryKeydown($event, i)"
       >
-        <img
-          :src="img.thumb"
-          :alt="img.name || '图片'"
-          :class="{ 'is-loaded': loadedCovers.has(img.thumb) }"
-          loading="lazy"
-          decoding="async"
-          @load="onCoverLoad(img.thumb)"
-          @error="onCoverLoad(img.thumb)"
-        >
+        <div class="img-box" :class="masonryBoxClass(img)" :style="masonryBoxStyle(img)">
+          <img
+            :src="img.thumb"
+            :alt="img.name || '图片'"
+            :class="{ 'is-loaded': loadedCovers.has(img.thumb) }"
+            loading="lazy"
+            decoding="async"
+            @load="onCoverLoad(img.thumb)"
+            @error="onCoverLoad(img.thumb)"
+          >
+        </div>
         <button
           class="masonry-fav"
           :class="{ faved: isFav(img.url) }"

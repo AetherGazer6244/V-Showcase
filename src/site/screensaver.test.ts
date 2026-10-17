@@ -373,7 +373,14 @@ describe('reportBrokenImage — 坏图跳过', () => {
   });
 
   it('整条列表全坏 → 退出屏保(防死循环)', async () => {
-    const [{ showScreensaver, useScreensaver, reportBrokenImage }] = await freshModules();
+    // 固定 seq:本用例断言按顺序的 url,默认 random 洗牌会让首张不可预测(50% 概率挂)
+    const [{ showScreensaver, useScreensaver, reportBrokenImage }, { useSettings, defaultSettings, defaultSaver }] =
+      await freshModules();
+    const { settings } = useSettings();
+    settings.value = {
+      ...defaultSettings(),
+      screensaver: { ...defaultSaver(), order: 'seq' },
+    };
     const { loadImages } = await import('@/shared/apiClient');
     vi.mocked(loadImages).mockResolvedValueOnce({ images: [imgs[0], imgs[1]] });
 

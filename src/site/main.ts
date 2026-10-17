@@ -7,6 +7,7 @@ import './styles/base.css';
 import './styles/wall.css';
 import './styles/gallery.css';
 import './styles/lightbox.css';
+import './styles/screensaver.css';
 import './styles/settings.css';
 import './styles/overrides.css';
 

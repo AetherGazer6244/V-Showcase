@@ -2,7 +2,7 @@
 import { ref, watch, onUnmounted } from 'vue';
 import type { CSSProperties } from 'vue';
 import { useScreensaver, reportBrokenImage } from './screensaver';
-import { useFocal, lightboxIsOpen } from './composables';
+import { useFocal, useOrientation, lightboxIsOpen } from './composables';
 import { useSettings } from './settings';
 
 /* ============================================================
@@ -21,6 +21,7 @@ import { useSettings } from './settings';
  * ============================================================ */
 const { active, current, hide } = useScreensaver();
 const { focalStyle } = useFocal();
+const { orientClass, orientStyle } = useOrientation();
 const { settings } = useSettings();
 
 /* ---- 双层交叉淡入:A/B 两槽交替,显示层 .on ---- */
@@ -51,10 +52,12 @@ function onLayerError(url: string) {
   reportBrokenImage(url);
 }
 
-/* ---- Ken Burns 时长 = 间隔 + 2s 缓冲(淡入后仍有缓慢运动) ---- */
+/* ---- Ken Burns 时长 = 间隔 + 2s 缓冲(淡入后仍有缓慢运动) ----
+ * 焦点 + 方向旋转(--rot/--ss-tx/--ss-ty,见 styles/screensaver.css)一并内联注入 */
 function layerStyle(url: string): CSSProperties {
   return {
     ...focalStyle(url),
+    ...orientStyle(url),
     animationDuration: (settings.value.screensaver.intervalSec * 1000 + 2000) + 'ms',
     animationPlayState: settings.value.screensaver.kenBurns ? 'running' : 'paused',
   } as CSSProperties;
@@ -117,7 +120,7 @@ onUnmounted(detach);
     <img
       v-if="slotA"
       class="ss-layer"
-      :class="{ on: showA, kenburns: showA }"
+      :class="[orientClass(slotA), { on: showA, kenburns: showA }]"
       :src="slotA"
       :style="layerStyle(slotA)"
       alt=""
@@ -127,7 +130,7 @@ onUnmounted(detach);
     <img
       v-if="slotB"
       class="ss-layer"
-      :class="{ on: !showA, kenburns: !showA }"
+      :class="[orientClass(slotB), { on: !showA, kenburns: !showA }]"
       :src="slotB"
       :style="layerStyle(slotB)"
       alt=""

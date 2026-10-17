@@ -7,13 +7,14 @@ import {
 } from './settings';
 import { useFavorites } from './favorites';
 import { useScreensaver } from './screensaver';
-import { useFocal, useLightbox } from './composables';
+import { useFocal, useOrientation, useLightbox } from './composables';
 import { loadImages, isFallback } from '@/shared/apiClient';
 import type { Image } from '@/shared/types';
 
 const { settings } = useSettings();
 const { favs, clearAll } = useFavorites();
 const { focalStyle } = useFocal();
+const { orientClass } = useOrientation();
 const saver = useScreensaver();
 const lb = useLightbox();
 
@@ -235,13 +236,15 @@ onUnmounted(() => {
           :title="img.name || '查看大图'"
           @click="openFav(i)"
         >
-          <img
-            :src="img.thumb"
-            :alt="img.name || '收藏图片'"
-            :style="focalStyle(img.url)"
-            loading="lazy"
-            decoding="async"
-          >
+          <div class="img-box" :class="orientClass(img.url)">
+            <img
+              :src="img.thumb"
+              :alt="img.name || '收藏图片'"
+              :style="focalStyle(img.url)"
+              loading="lazy"
+              decoding="async"
+            >
+          </div>
         </button>
       </div>
       <p v-else class="favs-empty">{{ favsEmptyText }}</p>

@@ -4,7 +4,7 @@ import { loadImages } from '@/shared/apiClient';
 import { shuffle, debounce } from '@/shared/utils';
 import type { Image } from '@/shared/types';
 import { useSettings } from './settings';
-import { useFocal, useLightbox, lightboxIsOpen } from './composables';
+import { useFocal, useOrientation, useLightbox, lightboxIsOpen } from './composables';
 import { isScreensaverActive } from './screensaver';
 import { windowSize, nextWindow, prefersReducedMotion, STEP_RATIO } from './wallRotate';
 import {
@@ -54,6 +54,7 @@ const ROW_STAGGER_MS = 60;
 const MIN_SPLASH_MS = 800;
 
 const { focalStyle } = useFocal();
+const { orientClass } = useOrientation();
 const lb = useLightbox();
 const { settings } = useSettings();
 
@@ -706,16 +707,18 @@ onUnmounted(() => {
             :data-index="item.gi"
             @click="onCardClick(item.gi)"
           >
-            <img
-              :src="item.img.thumb"
-              :alt="item.img.name || '图片'"
-              :style="focalStyle(item.img.url)"
-              :class="{ 'is-loaded': loadedUrls.has(item.img.url) }"
-              loading="eager"
-              decoding="async"
-              @load="onImgDone(item.img)"
-              @error="onImgError(item.img)"
-            >
+            <div class="img-box" :class="orientClass(item.img.url)">
+              <img
+                :src="item.img.thumb"
+                :alt="item.img.name || '图片'"
+                :style="focalStyle(item.img.url)"
+                :class="{ 'is-loaded': loadedUrls.has(item.img.url) }"
+                loading="eager"
+                decoding="async"
+                @load="onImgDone(item.img)"
+                @error="onImgError(item.img)"
+              >
+            </div>
           </figure>
         </div>
       </div>

@@ -3,6 +3,7 @@
  * ------------------------------------------------------------
  * 实现按职责拆在同目录:
  *   useFocal.ts        焦点 → CSS 变量样式(纯绑定,根治旧版查表键错误)
+ *   useOrientation.ts  方向标记 → 旋转类名/CSS 变量(图床剥 EXIF 的横躺图转正)
  *   useAlbums.ts       图集聚合(ALBUMS + localStorage 覆盖 + 未分组兜底)
  *   useTags.ts         图片标签(TAGS + localStorage 覆盖)
  *   useLightbox.ts     灯箱单例(App.vue 挂载组件,各视图调用 open)
@@ -10,6 +11,8 @@
  * 这里只做转出口,历史引用点('./composables')无需改动。
  * ============================================================ */
 export { useFocal } from './useFocal';
+export { useOrientation } from './useOrientation';
+export type { Orientation } from './useOrientation';
 export { useAlbums } from './useAlbums';
 export { useTags } from './useTags';
 export { useLightbox, lightboxIsOpen, LIGHTBOX_ZOOM } from './useLightbox';

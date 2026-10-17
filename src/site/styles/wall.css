@@ -107,30 +107,36 @@
      挂在父级才能在图片到达前显示灰色相框 */
   background: var(--img-bg);
   border-radius: var(--card-radius);
-  /* 不加 overflow:hidden —— 悬停时 img 上移 6px 会被裁掉 */
+  /* 不加 overflow:hidden —— 悬停时卡片上移 6px 会被裁掉 */
   box-shadow: var(--card-shadow);
   transition: box-shadow 0.35s ease;
 }
 
-.card img {
+/* 卡片内容盒:高度固定;方向旋转类(orient-*)挂在盒上(见 base.css 通用规则)。
+ * 悬停上移也在盒上做 —— img 的 transform 已被旋转占用,两者不能再抢。 */
+.card .img-box {
+  height: var(--card-height);
+  border-radius: var(--card-radius);
+  transition: transform 0.35s ease;
+}
+.card:hover .img-box { transform: translateY(-6px); }
+
+.card .img-box img {
   display: block;
   width: 100%;
-  height: var(--card-height);
+  height: 100%;
   object-fit: cover;
   border-radius: var(--card-radius);
   /* 焦点位置: 模板 :style 注入 --focal-x/y(键=原图 url),
      无数据时回退居中偏上(适合多数人像构图) */
   object-position: var(--focal-x, 50%) var(--focal-y, 25%);
-  transition: transform 0.35s ease, opacity 0.4s ease;
 
   /* 加载态: 未就绪时透明,灰色占位底由 .card 透出;就绪后淡入 */
   opacity: 0;
+  transition: opacity 0.4s ease;
 }
-.card img.is-loaded { opacity: 1; }
+.card .img-box img.is-loaded { opacity: 1; }
 
-.card:hover img {
-  transform: translateY(-6px);
-}
 /* 阴影已移到 .card(占位底需要),悬停阴影跟着卡片走 */
 .card:hover {
   box-shadow: var(--hover-shadow);

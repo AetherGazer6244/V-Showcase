@@ -253,7 +253,12 @@
   outline: 2px solid var(--brand-deep, #c9184a);
   outline-offset: 2px;
 }
-.favs-thumb img {
+/* 内容盒:方向旋转类(orient-*)挂在盒上(见 base.css 通用规则) */
+.favs-thumb .img-box {
+  width: 100%;
+  height: 100%;
+}
+.favs-thumb .img-box img {
   width: 100%;
   height: 100%;
   object-fit: cover;

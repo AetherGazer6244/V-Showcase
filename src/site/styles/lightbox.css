@@ -24,6 +24,18 @@
   user-select: none;
 }
 
+/* 90/270 旋转:contain 逻辑要在「旋转后的视觉盒」里成立 ——
+ * 元素盒宽高按原图宽高比(--lb-ar,load 时由 JS 写入)重新求解:
+ *   ew = min(88vw·ar, 82vh),eh = ew/ar → 转过来后恰好填满 88vw×82vh 限界。
+ * --lb-ar 缺省 1(方图假设,load 后立即修正;未加载时不显示,无跳变)。 */
+.lb-img.orient-90,
+.lb-img.orient-270 {
+  width: min(calc(88vw * var(--lb-ar, 1)), 82vh);
+  height: min(88vw, calc(82vh / var(--lb-ar, 1)));
+  max-width: none;
+  max-height: none;
+}
+
 .lb-caption {
   position: absolute;
   bottom: 26px;

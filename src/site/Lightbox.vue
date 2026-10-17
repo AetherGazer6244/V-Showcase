@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, computed, onUnmounted } from 'vue';
-import { useLightbox, useTags, LIGHTBOX_ZOOM } from './composables';
+import { useLightbox, useTags, useOrientation, LIGHTBOX_ZOOM } from './composables';
 import { useLikes } from './likes';
 import { useFavorites } from './favorites';
 import { formatInt } from '@/shared/utils';
@@ -10,6 +10,7 @@ const {
   scale, tx, ty, zoomBy, resetView,
 } = useLightbox();
 const { tagsOf } = useTags();
+const { orientationOf, orientClass } = useOrientation();
 const { ready: likesReady, likeCount, isLiked, toggleLike } = useLikes();
 const { isFav, toggleFav } = useFavorites();
 
@@ -21,6 +22,16 @@ watch(() => current.value?.url, () => {
   imgLoaded.value = false;
   imgFailed.value = false;
 });
+
+/** 原图就绪:点亮 + 记录真实宽高比(供 90/270 旋转后的容器尺寸换算;
+ *  图片本来就 opacity:0 隐藏到 load,首帧不会闪到未旋转尺寸) */
+function onImgLoad(e: Event) {
+  imgLoaded.value = true;
+  const el = e.currentTarget as HTMLImageElement | null;
+  if (el && el.naturalWidth > 0 && el.naturalHeight > 0) {
+    el.style.setProperty('--lb-ar', String(el.naturalWidth / el.naturalHeight));
+  }
+}
 
 /* ---- 邻图预热:左右各 1 张 ----
  * 灯箱加载的是原图(单张常以 MB 计),等点击切换才开始下载,
@@ -253,7 +264,8 @@ function onPointerUp(e: PointerEvent) {
 
 const imgStyle = computed(() => ({
   opacity: imgLoaded.value ? 1 : 0,
-  transform: `translateX(${swipeDx.value}px) translate(${tx.value}px, ${ty.value}px) scale(${scale.value})`,
+  // rotate 在最右 = 最先作用于内容,缩放/平移仍在屏幕坐标系 → 拖拽方向不随旋转改变
+  transform: `translateX(${swipeDx.value}px) translate(${tx.value}px, ${ty.value}px) scale(${scale.value}) rotate(${orientationOf(current.value?.url || '')}deg)`,
   transition: (panning.value || swiping.value)
     ? 'opacity 0.2s ease'
     : 'opacity 0.2s ease, transform 0.15s ease',
@@ -342,11 +354,12 @@ onUnmounted(() => {
       <img
         v-show="!imgFailed"
         class="lb-img"
+        :class="orientClass(current?.url || '')"
         :style="imgStyle"
         :src="current?.url"
         :alt="current?.name || `图片 ${(index ?? 0) + 1}`"
         draggable="false"
-        @load="imgLoaded = true"
+        @load="onImgLoad"
         @error="imgFailed = true"
       >
       <div v-if="imgFailed" class="lb-fail" role="alert">

@@ -1,0 +1,84 @@
+/* ============================================================
+ * Lumina 站点样式 — 屏保遮罩
+ * ------------------------------------------------------------
+ * 全屏黑底 + 双层图片交叉淡入 + Ken Burns 缓慢缩放。
+ * ★ 本段样式曾在 05aa3ba(styles.css 拆分)时整段丢失,
+ *   2026-10 从拆分前版本恢复;恢复时顺带加入方向旋转支持:
+ *   - 模板内联注入 --rot(0/90/180/270deg)
+ *   - 90/270 时元素盒宽高对调(100vh/100vw)并绝对居中,
+ *     借 --ss-tx/--ss-ty 让常规层与旋转层共用同一组
+ *     transform/Ken Burns 关键帧(变量按元素解析,天然隔离)
+ * ============================================================ */
+
+.screensaver {
+  position: fixed;
+  inset: 0;
+  z-index: 200;   /* 盖过导航(50)与灯箱(100) */
+  background: #000;
+  overflow: hidden;
+  cursor: none;
+}
+
+.ss-layer {
+  --rot: 0deg;
+  --ss-tx: 0%;
+  --ss-ty: 0%;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* 焦点位置: 模板 :style 注入 --focal-x/y(键=原图 url,复用焦点数据防裁脸) */
+  object-position: var(--focal-x, 50%) var(--focal-y, 25%);
+  /* 旋转(0/90/180/270)。Ken Burns 关键帧同样引用这些变量,
+     冻结(play-state: paused)时也保持在正确姿态 */
+  transform: translate(var(--ss-tx), var(--ss-ty)) rotate(var(--rot));
+  opacity: 0;
+  transition: opacity 1.5s ease;
+  will-change: opacity, transform;
+  user-select: none;
+}
+
+/* 90/270:图片内容要「转正」显示 —— 元素盒宽高对调后旋转,
+ * cover 先按对调后的盒裁切,转回正后恰好铺满视口 */
+.ss-layer.orient-90,
+.ss-layer.orient-270 {
+  width: 100vh;
+  height: 100vw;
+  inset: auto;
+  left: 50%;
+  top: 50%;
+  --ss-tx: -50%;
+  --ss-ty: -50%;
+}
+
+.ss-layer.on { opacity: 1; }
+
+/* Ken Burns:缓慢放大 1 → 1.08,时长由内联 animationDuration 控制;
+ * 开关由内联 animation-play-state 控制(关闭=冻结当前缩放,不重启不跳变) */
+.ss-layer.kenburns { animation: ss-kenburns linear forwards; }
+
+@keyframes ss-kenburns {
+  from { transform: translate(var(--ss-tx, 0%), var(--ss-ty, 0%)) rotate(var(--rot, 0deg)) scale(1); }
+  to   { transform: translate(var(--ss-tx, 0%), var(--ss-ty, 0%)) rotate(var(--rot, 0deg)) scale(1.08); }
+}
+
+.ss-hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 28px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.85rem;
+  letter-spacing: 0.12em;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  transition: opacity 1s ease;
+}
+.ss-hint.fade { opacity: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ss-layer { transition: none; }
+  .ss-layer.kenburns { animation: none; }
+}
