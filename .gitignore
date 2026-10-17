@@ -30,6 +30,7 @@ tools/node_modules/
 tools/weights/
 tools/.tmp/
 tools/.cache/
+tools/audit-report.json
 
 # 编辑器/备份残留（防御性）
 *.bak

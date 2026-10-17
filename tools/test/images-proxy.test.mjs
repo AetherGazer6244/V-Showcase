@@ -23,8 +23,27 @@ function upstreamPage(page, perPage, total) {
   const data = [];
   for (let i = 0; i < n; i++) {
     data.push({
+      // 故意带上前端不需要的字段:投影测试要用它们验证「垃圾字段被丢弃」
       origin_name: `p${page}-${i}.jpg`,
-      links: { url: `https://bu.dusays.com/p${page}-${i}.jpg`, thumbnail_url: `https://bu.dusays.com/t${page}-${i}.jpg` },
+      size: '218.47',
+      mimetype: 'image/jpeg',
+      extension: 'jpg',
+      md5: `md5-${page}-${i}`,
+      sha1: `sha1-${page}-${i}`,
+      human_date: '50天前',
+      date: '2026-10-17 14:30:08',
+      pathname: `2026/10/17/p${page}-${i}.jpg`,
+      width: 800 + i,
+      height: 1200 + i,
+      links: {
+        url: `https://bu.dusays.com/p${page}-${i}.jpg`,
+        thumbnail_url: `https://bu.dusays.com/t${page}-${i}.jpg`,
+        html: `<img src="https://bu.dusays.com/p${page}-${i}.jpg">`,
+        bbcode: `[img]https://bu.dusays.com/p${page}-${i}.jpg[/img]`,
+        markdown: `![](https://bu.dusays.com/p${page}-${i}.jpg)`,
+        markdown_with_link: `[![](...)](...)`,
+        delete_url: `https://7bu.top/delete/${page}-${i}`,
+      },
     });
   }
   return new Response(JSON.stringify({ data: { data, total, last_page: lastPage, current_page: page } }), {
@@ -207,6 +226,38 @@ describe('functions/api/images — 缓存', () => {
     expect(cacheHits.put).toBe(0);
     expect(cacheStore.size).toBe(0);
     expect(calls).toHaveLength(5); // 200/40 = 5 页,失败页也试了
+  });
+});
+
+describe('functions/api/images — 字段投影', () => {
+  it('只留 origin_name/width/height/links.url/links.thumbnail_url,垃圾字段丢弃', async () => {
+    install({ total: 1 });
+    const res = await imagesHandler({ request: req(), env: ENV });
+    const body = await res.json();
+    expect(body.data.data[0]).toEqual({
+      origin_name: 'p1-0.jpg',
+      width: 800,
+      height: 1200,
+      links: {
+        url: 'https://bu.dusays.com/p1-0.jpg',
+        thumbnail_url: 'https://bu.dusays.com/t1-0.jpg',
+      },
+    });
+  });
+
+  it('links 缺失时投影不抛错,产出空串(前端 thumb 回退 url 后过滤)', async () => {
+    globalThis.caches = { default: { async match() { return undefined; }, async put() {} } };
+    globalThis.fetch = vi.fn(async () => new Response(JSON.stringify({
+      data: { data: [{ origin_name: 'broken.jpg' }], total: 1, last_page: 1, current_page: 1 },
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    const res = await imagesHandler({ request: req(), env: ENV });
+    const body = await res.json();
+    expect(body.data.data[0]).toEqual({
+      origin_name: 'broken.jpg',
+      width: 0,
+      height: 0,
+      links: { url: '', thumbnail_url: '' },
+    });
   });
 });
 

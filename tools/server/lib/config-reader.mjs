@@ -435,6 +435,70 @@ export async function writeTags(doc) {
   return { ok: true, imageCount: Object.keys(cleaned).length, tagCount };
 }
 
+/* ---- 方向标记(orientations)读写:src/site/orientations.ts ---- */
+
+const ORIENTATIONS_HEADER = `/* ============================================================
+ * Lumina — 图片方向标记数据(纯字面量)
+ * ------------------------------------------------------------
+ * 图床转存会剥掉 EXIF,部分图片以横躺姿态存储;这里按图
+ * 手工标记「显示时应旋转的角度」,站点渲染时转正。
+ * 格式:{ [图片原图 url]: 0 | 90 | 180 | 270 }
+ *
+ * ★ 键约定:键永远是 Image.url(原图直链),不是 thumb
+ *   (与 focalPoints.ts / tags.ts 同一约定)。
+ *
+ * 注意:纯字面量文件(禁 import/类型注解),由 tools 服务端 acorn 解析
+ *
+ * 浏览器侧:由本地 manager(焦点 Tab 批量方向按钮)离线产出;
+ * 手工编辑本文件后提交推送即可触发部署。
+ * ============================================================ */
+`;
+
+const ORIENT_VALUES = new Set([0, 90, 180, 270]);
+
+/** 清洗方向文档:url 键非空、值 ∈ {0,90,180,270};0 = 默认方向,直接丢弃不落盘。
+ *  键按字典序排序(diff 稳定)。类型非法抛错。 */
+export function sanitizeOrientationsDoc(doc) {
+  if (!doc || typeof doc !== 'object' || Array.isArray(doc)) {
+    throw new Error('orientations 文档必须是普通对象');
+  }
+  // 无原型对象:url 键来自 Manager 发来的请求体,防 "__proto__" 污染
+  const out = Object.create(null);
+  for (const [url, v] of Object.entries(doc)) {
+    if (typeof url !== 'string' || url.length === 0) {
+      throw new Error(`方向键必须是非空字符串(url),实际: ${JSON.stringify(url)}`);
+    }
+    if (!Number.isInteger(v) || !ORIENT_VALUES.has(v)) {
+      throw new Error(`url "${url}" 的方向值必须是 0/90/180/270,实际 ${JSON.stringify(v)}`);
+    }
+    if (v !== 0) out[url] = v;
+  }
+  const sorted = Object.create(null);
+  for (const k of Object.keys(out).sort()) sorted[k] = out[k];
+  return sorted;
+}
+
+/** 读取 src/site/orientations.ts;文件不存在返回空对象 */
+export async function readOrientations() {
+  const viewerDir = getViewerDir();
+  try {
+    const raw = await fs.readFile(path.join(viewerDir, 'src', 'site', 'orientations.ts'), 'utf8');
+    return safeParseObject(raw, 'ORIENTATIONS');
+  } catch (e) {
+    if (e.code === 'ENOENT') return {};
+    throw e;
+  }
+}
+
+/** 覆盖写回 src/site/orientations.ts(先清洗;返回写入条数) */
+export async function writeOrientations(doc) {
+  const cleaned = sanitizeOrientationsDoc(doc);
+  const viewerDir = getViewerDir();
+  const body = `export const ORIENTATIONS = ${JSON.stringify(cleaned, null, 2)};\n`;
+  await fs.writeFile(path.join(viewerDir, 'src', 'site', 'orientations.ts'), ORIENTATIONS_HEADER + body, 'utf8');
+  return { ok: true, count: Object.keys(cleaned).length };
+}
+
 /* ---- 站点配置(config.ts)白名单写入 ----
  * Manager 只允许改版面/拉取字段,mode/token 等敏感键拒改;
  * 写回时从现文件解析后合并,不会漂移。 */

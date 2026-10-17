@@ -28,6 +28,8 @@
  *   POST /api/albums/delete             → 删除图集(旗下 url 自动降级为未分组)
  *   GET  /api/tags                      → 读 src/site/tags.ts
  *   POST /api/tags                      → 整体覆盖写回
+ *   GET  /api/orientations              → 读 src/site/orientations.ts
+ *   POST /api/orientations              → 整体覆盖写回(值 0/90/180/270)
  *
  * 用法:
  *   node server/serve.mjs               (默认:检查+装依赖+开浏览器)
@@ -58,6 +60,8 @@ import {
   readTags,
   writeTags,
   validateTagsDoc,
+  readOrientations,
+  writeOrientations,
   writeConfig,
   validateConfigPatch,
   getByPath,
@@ -153,23 +157,58 @@ async function ensureDeps() {
   }
 }
 
+/** 递归找目录内最新 mtime(跳过 node_modules) */
+async function newestMtime(dir) {
+  let newest = 0;
+  const stack = [dir];
+  while (stack.length) {
+    const cur = stack.pop();
+    let entries;
+    try { entries = await fs.readdir(cur, { withFileTypes: true }); }
+    catch { continue; }
+    for (const ent of entries) {
+      const p = path.join(cur, ent.name);
+      if (ent.isDirectory()) {
+        if (ent.name !== 'node_modules') stack.push(p);
+        continue;
+      }
+      try {
+        const st = await fs.stat(p);
+        if (st.mtimeMs > newest) newest = st.mtimeMs;
+      } catch { /* 文件恰好被删,忽略 */ }
+    }
+  }
+  return newest;
+}
+
+function buildManager() {
+  log('📦', '正在构建 manager(约 10 秒)...');
+  const build = spawn('npm', ['run', 'build:manager'], {
+    cwd: PROJECT_ROOT,
+    stdio: 'inherit',
+    shell: true,
+  });
+  return new Promise((resolve, reject) => {
+    build.on('exit', (code) => {
+      if (code !== 0) { log('❌', 'manager 构建失败,请手动执行 npm run build:manager'); reject(new Error('build:manager failed')); }
+      else { log('✅', 'manager 构建完成'); resolve(); }
+    });
+  });
+}
+
 async function ensureManager() {
+  const outFile = path.join(MANAGER, 'manager.html');
   try {
-    await fs.access(path.join(MANAGER, 'manager.html'));
+    const outTime = (await fs.stat(outFile)).mtimeMs;
+    const srcTime = await newestMtime(path.resolve(PROJECT_ROOT, 'src/manager'));
+    // 源码比产物新 → 用户改过 Manager 源码但忘了重新 build,自动补上
+    if (srcTime > outTime) {
+      log('🔄', '检测到 src/manager 源码比 dist-manager 新,自动重新构建...');
+      await buildManager();
+    }
   } catch {
     // 产物缺失 → 自动执行 npm run build:manager
-    log('📦', '未找到 dist-manager/manager.html,正在构建 manager(约 10 秒)...');
-    const build = spawn('npm', ['run', 'build:manager'], {
-      cwd: PROJECT_ROOT,
-      stdio: 'inherit',
-      shell: true,
-    });
-    await new Promise((resolve, reject) => {
-      build.on('exit', (code) => {
-        if (code !== 0) { log('❌', 'manager 构建失败,请手动执行 npm run build:manager'); reject(new Error('build:manager failed')); }
-        else { log('✅', 'manager 构建完成'); resolve(); }
-      });
-    });
+    await buildManager();
   }
 }
 
@@ -498,6 +537,7 @@ const SYNCABLE_FILES = {
   'src/site/focalPoints.ts': 'chore: update image focal points',
   'src/site/albums.ts': 'chore: update albums',
   'src/site/tags.ts': 'chore: update image tags',
+  'src/site/orientations.ts': 'chore: update image orientations',
   'src/site/config.ts': 'chore: update site config',
 };
 
@@ -813,6 +853,30 @@ async function handle(req, res, url) {
       validateTagsDoc(doc);
       const r = await writeTags(doc);
       log('💾', `写入 tags.ts (图片 ${r.imageCount} 张, 标签 ${r.tagCount} 个)`);
+      sendJson(res, 200, { ok: true, ...r });
+    } catch (e) {
+      sendJson(res, 400, { ok: false, error: e.message });
+    }
+    return;
+  }
+
+  // ── 方向标记(orientations)──────────────────────
+  if (pathname === '/api/orientations' && req.method === 'GET') {
+    try {
+      const data = await readOrientations();
+      sendJson(res, 200, { ok: true, data });
+    } catch (e) {
+      sendJson(res, 500, { ok: false, error: e.message });
+    }
+    return;
+  }
+
+  if (pathname === '/api/orientations' && req.method === 'POST') {
+    const body = await readBody(req);
+    try {
+      const doc = JSON.parse(body);
+      const r = await writeOrientations(doc);
+      log('💾', `写入 orientations.ts (${r.count} 项)`);
       sendJson(res, 200, { ok: true, ...r });
     } catch (e) {
       sendJson(res, 400, { ok: false, error: e.message });

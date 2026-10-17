@@ -17,13 +17,14 @@ tools/
 ├── server/                      ← ★ 启动器 + HTTP 服务器
 │   ├── serve.mjs                ← 入口（node server/serve.mjs）
 │   └── lib/
-│       └── config-reader.mjs    ← 共享：acorn 安全解析 src/site/*.ts 数据文件
+│       ├── config-reader.mjs    ← 共享：acorn 安全解析 src/site/*.ts 数据文件
+│       └── net-utils.mjs        ← 共享：DNS 兜底解析 / 重定向 GET / 并发 pMap / magic bytes 嗅探
 │
+├── audit-images.mjs             ← ★ 图库体检（死链 / 伪装图 / 重复 / 缺元数据）
 ├── test/                        ← node 侧测试（npm test，独立 vitest 配置）
 │
 └── ai/                          ← ★ AI 工具（命令行）
-    ├── build-focal-points.mjs   ← 人脸检测 + 批量分析（含 --download-only）
-    └── analyze-images.mjs       ← 列出 viewer 当前所有图片 URL
+    └── build-focal-points.mjs   ← 人脸检测 + 批量分析（含 --limit / --no-write / --download-only）
 ```
 
 ---
@@ -145,10 +146,13 @@ node ai/build-focal-points.mjs --strategy=center
 # 从真实图床拉数据（token 从 viewer 根目录 .dev.vars 读取）
 node ai/build-focal-points.mjs --source=upstream
 
+# 试跑：只处理前 10 张、不写文件（看检出率再决定全量）
+node ai/build-focal-points.mjs --source=upstream --limit=10 --no-write
+
 # 调整并发下载数（默认 4）
 node ai/build-focal-points.mjs --concurrency=8
 
-# 仅下载模型（不分析）
+# 仅准备模型（不分析）
 node ai/build-focal-points.mjs --download-only
 
 # 或用 npm script（更简短）
@@ -157,7 +161,12 @@ npm run ai:center
 npm run download
 ```
 
-首次运行会自动下载 face-api 模型到 `./weights/`（~6MB，已被 `.gitignore` 排除）。
+**技术底座（2026-10 重写）**：tf 后端用 `@tensorflow/tfjs` + `@tensorflow/tfjs-backend-wasm`（纯 WASM，任何 Node ≥18 都能跑，不再依赖装不上原生编译的 tfjs-node）；图片解码用 `sharp`（顺带支持 webp 伪装 jpg）。模型权重优先直接用 `@vladmandic/face-api` npm 包自带的（`node_modules/@vladmandic/face-api/model/`，零下载）；包缺文件时才回落到网上下载（jsDelivr 镜像优先，`raw.githubusercontent.com` 在部分网络不可达）。
+
+> **⚠️ 检出率预期**：SSD MobileNet 是**真人脸**模型。图库以二次元插画/动漫图为主时检出率约 0%
+> （实测 10 张 0 检出，管线本身已用官方人脸样例验证正常）。这类图库的焦点请用
+> Manager 焦点 tab 的「按横竖预填」批量预设（竖图 0.33 / 横图 0.5 / 方图 0.4）或人工标注；
+> 图库以后若有真人照片，AI 批量分析即可正常发挥作用。
 
 ### CLI 参数一览
 
@@ -168,21 +177,33 @@ npm run download
 | `--source=fallback` | ✓ | 数据源：viewer 的 `fallbackImages` |
 | `--source=upstream` | | 数据源：viewer 实际图床 API |
 | `--concurrency=N` | 4 | 并发下载数（1~16） |
-| `--download-only` | | 只下载模型，跳过分析 |
+| `--limit=N` | 0(全部) | 只处理前 N 张（配合 `--no-write` 试跑） |
+| `--no-write` | | 只检测不写 `focalPoints.ts`（打印检出预览） |
+| `--download-only` | | 只准备模型，跳过分析 |
 
 ---
 
-## 辅助命令
+## 图库体检（audit-images.mjs）
+
+直连图床 API（不走网站清单，拿全字段：md5 / size / 宽高 / 上传时间 / 删除链接），给整个图库做健康检查：
+
+- **死链**：逐张 `Range GET` 前 16 字节验活（绝不整张下载），≥400 复核一次才算死，缩略图一并查
+- **伪装图**：magic bytes 嗅探真实格式，与扩展名比对（如 webp 伪装 `.jpg`）
+- **重复**：按 md5 分组，列出每组全部副本（含 key / 原名 / 大小 / 时间 / delete_url）
+- **缺元数据**：宽高或大小为 0 的（批量预设焦点会当方图处理）
 
 ```bash
-# 列出 viewer 当前所有图片 URL（兜底图）
-node ai/analyze-images.mjs
-# 或
-npm run list
-
-# 输出 JSON 格式
-node ai/analyze-images.mjs --json
+cd tools
+npm run audit                     # 全量体检,报告写 tools/audit-report.json(已 gitignore)
+node audit-images.mjs --skip-ping # 只查元数据不验活(快)
+node audit-images.mjs --no-thumbs # 跳过缩略图验活
+node audit-images.mjs --concurrency=8
+node audit-images.mjs --max-pages=10   # 页数保险丝(默认 50 页 = 2000 张)
 ```
+
+> 2026-10-17 实测(164 张)：健康 162、死链 2(404)、缩略图全活、伪装图 27(全为 webp 伪装 .jpg)、
+> 重复 4 组 ×2(2026-09-11 与 2026-10-04 两批各传一次,同 md5 同 URL,删旧留新即可)、缺元数据 0。
+> 本机 DNS 对部分域名间歇性解析失败,脚本内置公共 DNS 兜底(`server/lib/net-utils.mjs`),两工具共用。
 
 ---
 
@@ -200,6 +221,10 @@ node ai/analyze-images.mjs --json
 | POST | `/api/albums/add` | body=`{name}` → 创建新图集，返回 `{id, name}` |
 | POST | `/api/albums/rename` | body=`{id, name}` → 重命名 |
 | POST | `/api/albums/delete` | body=`{id}` → 删除图集，旗下 url 自动降级为未分组 |
+| GET | `/api/tags` | 读取 `../src/site/tags.ts` |
+| POST | `/api/tags` | 整体覆盖写回 `../src/site/tags.ts`（body=JSON） |
+| GET | `/api/orientations` | 读取 `../src/site/orientations.ts`（方向标记） |
+| POST | `/api/orientations` | 整体覆盖写回（值 0/90/180/270；0 视为删除不落盘） |
 | GET | `/api/proxy-images` | 尝试从 viewer 上游图床拉取真实数据(自动分页合并,单页 40 张硬上限被代理吸收) |
 | POST | `/api/sync-deploy` | 提交并推送数据文件到 `origin/main`(body 可选 `{file}`，白名单内的 ts) |
 | POST | `/api/run-ai` | spawn AI 工具，SSE 流式返回日志 |
@@ -215,14 +240,16 @@ A：查看终端输出的实际端口，手动访问 `http://127.0.0.1:<端口>/
 A：在项目根目录手动执行 `npm run build:manager`，确认 Node ≥18 且依赖已安装（`npm install`）。
 
 **Q：AI 工具报"无法加载模型"？**
-A：检查网络，首次需要从 GitHub 下载模型。
-可访问 https://github.com/vladmandic/face-api/tree/master/model 手动下载。
+A：模型优先用 `@vladmandic/face-api` npm 包自带的（`npm install` 后即有）。
+若包不完整，脚本会自动从 jsDelivr 镜像下载到 `./weights/`（~6MB，已被 `.gitignore` 排除）。
 
 **Q：编辑后 viewer 没生效？**
 A：必须点 "💾 保存到 viewer"，否则只存在 localStorage。
 
-**Q：AI 检测不到某些人脸？**
-A：提高图片清晰度，或手动用编辑器加图集拖拽按钮。
+**Q：AI 检测不到人脸？**
+A：两种情况——① 图是二次元插画/动漫风：SSD MobileNet 只认真人脸，检不出是预期行为，
+请改用「按横竖预填」批量预设或人工标注（详见上文检出率说明）；
+② 真人照片但置信度不够：提高图片清晰度，或手动在编辑器里点焦点。
 
 **Q：Node.js 版本不够？**
 A：需要 ≥18，前往 https://nodejs.org 下载新版。
