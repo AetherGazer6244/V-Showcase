@@ -16,6 +16,10 @@ export interface Image {
   thumb: string;
   /** 原始文件名,可为空串 */
   name: string;
+  /** 原图宽(px),mapImage 恒定填充,上游缺失时为 0 — 横竖判断/旋转缩放用 */
+  width?: number;
+  /** 原图高(px),同上 */
+  height?: number;
 }
 
 /** 焦点归一化坐标(0=左/上, 1=右/下) */
@@ -38,6 +42,13 @@ export interface AlbumsDoc {
 
 /** tags 数据文件整体: url → 标签数组(键 = Image.url 原图直链) */
 export type TagsDoc = { [url: string]: string[] };
+
+/** 显示时应旋转的角度(度)。0 = 不旋转(默认) */
+export type Orientation = 0 | 90 | 180 | 270;
+
+/** orientations 数据文件整体: url → 旋转角(键 = Image.url 原图直链;
+ *  落盘时 0 值条目会被服务端丢弃) */
+export type OrientationsDoc = { [url: string]: Orientation };
 
 /** 聚合后的图集(图集页渲染用) */
 export interface Album {

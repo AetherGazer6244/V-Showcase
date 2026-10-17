@@ -17,6 +17,21 @@ describe('mapImage', () => {
     expect(img.name).toBe('a.png');
   });
 
+  it('宽高透传;缺失时补 0(横竖判断/旋转缩放依赖)', () => {
+    const withSize = mapImage({
+      origin_name: 'a.png',
+      width: 800,
+      height: 1200,
+      links: { url: 'https://bu.dusays.com/x/a.png', thumbnail_url: 'https://t/a.png' },
+    });
+    expect(withSize.width).toBe(800);
+    expect(withSize.height).toBe(1200);
+
+    const noSize = mapImage({ links: { url: 'https://a/1.jpg' } });
+    expect(noSize.width).toBe(0);
+    expect(noSize.height).toBe(0);
+  });
+
   // 回归:曾经把原图 url 当 srcset 的 2x 候选,导致高清屏首屏下载全部原图,
   // 且频繁加载失败。thumbWidth(600) 恰好等于 300px 卡片在 2x 屏上的需求。
   it('不产出 srcset —— 避免高清屏去拉原图', () => {

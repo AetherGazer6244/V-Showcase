@@ -60,12 +60,15 @@ export function mapImage(item: RawItem): Image {
   );
   const thumb = rewriteThumb(rawThumb);
   const name = String((CONFIG.imgNameField && getByPath(item, CONFIG.imgNameField)) || '');
-  return { url, name, thumb };
+  // 宽高用于横竖判断(批量焦点预设)/旋转缩放;上游缺失时 0,调用方按假值处理
+  const width = Number(getByPath(item, 'width')) || 0;
+  const height = Number(getByPath(item, 'height')) || 0;
+  return { url, name, thumb, width, height };
 }
 
 /** fallback 图片包装成统一 Image(url 与 thumb 相同,焦点/图集查表可命中) */
 export function toFallbackImages(urls: string[]): Image[] {
-  return urls.map((u) => ({ url: u, name: '', thumb: u }));
+  return urls.map((u) => ({ url: u, name: '', thumb: u, width: 0, height: 0 }));
 }
 
 /** 是否使用兜底图(proxy 不可达时供调用方判断,避免图集页误判) */

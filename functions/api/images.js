@@ -28,6 +28,13 @@
  * 3. 每个上游请求都有超时
  *    Workers 对单条子请求没有墙钟上限（只要客户端还连着）。
  *    图床 accept 连接后不响应 = 本函数永久挂起，前端永远「加载中」。
+ *
+ * 4. 响应做字段投影（projectItem）
+ *    前端只读 origin_name / width / height / links.url / links.thumbnail_url
+ *    五个字段，图床却每张都带分享链接(html/bbcode/markdown…)、md5、
+ *    sha1、时间戳等——164 张实测 181KB，投影后 48KB(-73%)。
+ *    省访客带宽，也省 Workers 的 JSON 解析 CPU（免费版 10ms 预算）。
+ *    需要全字段的本地工具（manager 代理 / audit 体检）自己直连图床。
  * ============================================================ */
 
 const UPSTREAM_BASE = 'https://7bu.top/api/v1/images';
@@ -255,15 +262,34 @@ function clampInt(raw, min, max, fallback) {
 }
 
 /**
+ * 字段投影：只保留前端真正读取的字段，其余（分享链接/md5/时间戳等）丢弃。
+ * 见文件头设计说明 #4。
+ */
+function projectItem(it) {
+  const src = it || {};
+  const links = src.links || {};
+  return {
+    origin_name: src.origin_name || '',
+    width: Number(src.width) || 0,
+    height: Number(src.height) || 0,
+    links: {
+      url: links.url || '',
+      thumbnail_url: links.thumbnail_url || '',
+    },
+  };
+}
+
+/**
  * 包装成图床原始三段式，前端兜底逻辑可直接复用。
  * total 用上游真实值，不再谎报 items.length —— 半份数据下二者一致会让人无法察觉丢图。
+ * items 先过 projectItem 投影（见文件头设计说明 #4）。
  */
 function wrapUpstream(items, innerData, meta) {
   return {
     status: true,
     message: 'success',
     data: Object.assign({}, innerData, {
-      data: items,
+      data: items.map(projectItem),
       current_page: 1,
       last_page: 1,
       total: meta.total || items.length,
