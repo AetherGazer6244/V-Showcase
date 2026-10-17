@@ -12,7 +12,7 @@
 import { ref, inject, provide } from 'vue';
 import type { InjectionKey, Ref } from 'vue';
 import { getByPath } from '@/shared/utils';
-import type { FocalPoint, AlbumsDoc, TagsDoc } from '@/shared/types';
+import type { FocalPoint, AlbumsDoc, TagsDoc, OrientationsDoc } from '@/shared/types';
 
 /* ── 通用请求 ────────────────────────────── */
 
@@ -77,6 +77,10 @@ export interface MImage {
   /** 缩略图(约 600w):网格里只加载它,上游没给时回落为 url */
   thumb: string;
   name: string;
+  /** 原图宽(px),上游缺失时为 0 — 批量"按横竖预填焦点"用 */
+  width: number;
+  /** 原图高(px),同上 */
+  height: number;
 }
 
 export interface ManagerState {
@@ -225,6 +229,27 @@ export async function saveTags(doc: TagsDoc): Promise<number | null> {
   return r.imageCount ?? 0;
 }
 
+/* ── 方向标记(orientations) ──────────────── */
+
+export async function loadOrientations(): Promise<OrientationsDoc> {
+  const r = await api<{ ok: boolean; data?: OrientationsDoc; error?: string }>('GET', '/api/orientations');
+  if (!r.ok) {
+    toast('读取 orientations.ts 失败: ' + (r.error ?? ''), 'error');
+    return {};
+  }
+  return r.data ?? {};
+}
+
+/** 返回写入条数(0 值条目服务端会丢弃,不计入) */
+export async function saveOrientations(doc: OrientationsDoc): Promise<number | null> {
+  const r = await api<{ ok: boolean; count?: number; error?: string }>('POST', '/api/orientations', doc);
+  if (!r.ok) {
+    toast('保存方向失败: ' + (r.error ?? ''), 'error');
+    return null;
+  }
+  return r.count ?? 0;
+}
+
 /* ── 图片列表(代理 + 兜底) ───────────────── */
 
 export async function loadImages(): Promise<{ list: MImage[]; usedFallback: boolean }> {
@@ -243,7 +268,9 @@ export async function loadImages(): Promise<{ list: MImage[]; usedFallback: bool
         .map((it) => {
           const url = String(getByPath(it, cfg.imgUrlField) ?? '');
           const thumb = String((cfg.imgThumbField && getByPath(it, cfg.imgThumbField)) || url);
-          return { url, thumb, name: String(getByPath(it, cfg.imgNameField) ?? '') };
+          const width = Number(getByPath(it, 'width')) || 0;
+          const height = Number(getByPath(it, 'height')) || 0;
+          return { url, thumb, name: String(getByPath(it, cfg.imgNameField) ?? ''), width, height };
         })
         .filter((it) => it.url);
     }
@@ -251,7 +278,7 @@ export async function loadImages(): Promise<{ list: MImage[]; usedFallback: bool
 
   let usedFallback = false;
   if (!rows.length) {
-    rows = (cfg.fallbackImages || []).map((u) => ({ url: u, thumb: u, name: '' }));
+    rows = (cfg.fallbackImages || []).map((u) => ({ url: u, thumb: u, name: '', width: 0, height: 0 }));
     usedFallback = true;
     toast('已使用兜底图列表(代理不可用)', 'warn');
   }

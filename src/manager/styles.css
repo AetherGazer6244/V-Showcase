@@ -283,6 +283,12 @@ html, body {
 /* 完整图:整张缩放后居中,四周留白,不裁剪 */
 .grid.is-full .tile-frame img { object-fit: contain; }
 
+/* 方向标记预览:框是正方形,contain(对调后约束不变)与 cover(方×方旋转仍方)
+ * 在 90° 倍数旋转下都自然成立,直接转即可 */
+.tile-frame img.orient-90 { transform: rotate(90deg); }
+.tile-frame img.orient-180 { transform: rotate(180deg); }
+.tile-frame img.orient-270 { transform: rotate(270deg); }
+
 .tile-badge {
   position: absolute; top: 3px; left: 3px; z-index: 1;
   width: 18px; height: 18px;
@@ -295,11 +301,59 @@ html, body {
 }
 .tile-badge-static { background: linear-gradient(135deg, #4a90e2, #6c63ff); }
 .tile-badge-empty { background: rgba(70, 76, 90, 0.7); opacity: 0.75; }
+/* 方向标记角标(左下角,黄色数字;有标记才渲染) */
+.tile-orient {
+  position: absolute; bottom: 3px; left: 3px; z-index: 1;
+  height: 18px;
+  padding: 0 6px;
+  background: rgba(20, 24, 32, 0.8);
+  color: #ffc740;
+  border-radius: 9px;
+  display: flex; align-items: center;
+  font-size: 0.62rem; font-weight: 700;
+  backdrop-filter: blur(6px);
+}
 .tile-name {
   padding: 5px 2px 1px;
   font-size: 0.72rem; color: var(--text-sub);
   text-align: left;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ─── 多选批量 ───────────────────────────── */
+.tile.is-selected .tile-frame {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+.tile-check {
+  position: absolute; top: 3px; right: 3px; z-index: 1;
+  width: 18px; height: 18px;
+  background: var(--primary);
+  color: #fff;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.62rem; font-weight: 800;
+}
+.batch-bar {
+  position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
+  z-index: 90;
+  display: flex; gap: 8px; align-items: center;
+  flex-wrap: wrap; justify-content: center;
+  max-width: min(92vw, 720px);
+  padding: 10px 14px;
+  background: rgba(27, 31, 40, 0.92);
+  backdrop-filter: blur(20px) saturate(1.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+.batch-count { font-size: 0.85rem; white-space: nowrap; }
+.batch-sep {
+  width: 1px;
+  align-self: stretch;
+  margin: 2px 4px;
+  background: var(--border);
 }
 
 /* ─── 模态框(毛玻璃) ─────────────────────── */
@@ -366,19 +420,21 @@ html, body {
 .modal-stage-frame {
   position: relative;
   width: 100%;
-  max-height: 50vh;
-  overflow: hidden;
+  display: flex;
+  justify-content: center;
   border-radius: var(--radius-sm);
   background: #101216;
   cursor: crosshair;
   user-select: none;
 }
-.modal-stage-frame img {
+/* 图片盒子:紧贴图片自身,不放大不裁切 —— 竖图完整可见,小图不糊 */
+.modal-stage-box { position: relative; font-size: 0; }
+.modal-stage-box img {
   display: block;
-  width: 100%;
+  width: auto;
   height: auto;
-  max-height: 50vh;
-  object-fit: contain;
+  max-width: 100%;
+  max-height: min(58vh, 640px);
   pointer-events: none;
 }
 .modal-stage-marker {
@@ -998,7 +1054,7 @@ html, body {
   .side-foot .btn { width: auto; }
   .bar { flex-direction: column; align-items: stretch; gap: 10px; }
   .btn { padding: 8px 13px; font-size: 0.8rem; }
-  .grid { --icon: 92px; }
+  /* .grid 的 --icon 由 FocalTab 内联样式(用户选的密度档)控制,媒体查询不再覆盖 */
   .modal-body { width: 95vw; padding: 18px; }
   .ctrl-preview { width: 80px; }
   .album-panel { position: static; margin: 14px 14px 0; }

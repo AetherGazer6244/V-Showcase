@@ -11,11 +11,12 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'apply', p: FocalPoint): void;
+  (e: 'applyNext', p: FocalPoint): void;
+  (e: 'nav', delta: number): void;
   (e: 'clear'): void;
   (e: 'close'): void;
 }>();
 
-const stageEl = ref<HTMLElement | null>(null);
 const stageImg = ref<HTMLImageElement | null>(null);
 
 const point = ref<FocalPoint>(
@@ -28,31 +29,19 @@ function setPoint(x: number, y: number) {
   point.value = { x: clamp01(x), y: clamp01(y) };
 }
 
-/** 点击坐标 → 图片归一化坐标(扣除 object-fit: contain 的留黑边) */
+/** 点击坐标 → 图片归一化坐标。
+ *  舞台改为「图片盒子原样展示」(不放大、不裁切):img 元素本身紧贴内容,
+ *  所以直接用 img 的 rect 归一化即可,无需再算 object-fit 的留黑边。 */
 function stagePointFromEvent(e: MouseEvent | TouchEvent): FocalPoint {
-  const stage = stageEl.value;
   const imgEl = stageImg.value;
-  if (!stage || !imgEl || !imgEl.naturalWidth || !imgEl.naturalHeight) {
+  if (!imgEl || !imgEl.naturalWidth || !imgEl.naturalHeight) {
     return { x: 0.5, y: 0.25 };
   }
-  const rect = stage.getBoundingClientRect();
+  const rect = imgEl.getBoundingClientRect();
   const src = 'touches' in e ? e.touches[0] : e;
-  const cx = (src?.clientX ?? 0) - rect.left;
-  const cy = (src?.clientY ?? 0) - rect.top;
-
-  const frameAR = rect.width / rect.height;
-  const imgAR = imgEl.naturalWidth / imgEl.naturalHeight;
-  let dispW: number, dispH: number, dispX: number, dispY: number;
-  if (imgAR > frameAR) {
-    dispW = rect.width; dispH = rect.width / imgAR;
-    dispX = 0; dispY = (rect.height - dispH) / 2;
-  } else {
-    dispH = rect.height; dispW = rect.height * imgAR;
-    dispX = (rect.width - dispW) / 2; dispY = 0;
-  }
   return {
-    x: clamp01((cx - dispX) / dispW),
-    y: clamp01((cy - dispY) / dispH),
+    x: clamp01(((src?.clientX ?? 0) - rect.left) / rect.width),
+    y: clamp01(((src?.clientY ?? 0) - rect.top) / rect.height),
   };
 }
 
@@ -74,7 +63,15 @@ function onWindowMove(e: MouseEvent) {
 function onWindowUp() { dragging = false; }
 
 function onKeydown(e: KeyboardEvent) {
-  if (e.key === 'Escape') emit('close');
+  if (e.key === 'Escape') {
+    emit('close');
+    return;
+  }
+  // 数字输入框里按 ←/→ 是移动光标,不切图
+  const t = e.target as HTMLElement | null;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+  if (e.key === 'ArrowLeft') emit('nav', -1);
+  else if (e.key === 'ArrowRight') emit('nav', 1);
 }
 
 onMounted(() => {
@@ -98,21 +95,22 @@ onUnmounted(() => {
 
       <div class="modal-stage">
         <div
-          ref="stageEl"
           class="modal-stage-frame"
           @mousedown.prevent="onStageDown"
           @touchstart.prevent="onStageDown"
         >
-          <img ref="stageImg" :src="url" alt="" crossorigin="anonymous">
-          <div
-            class="modal-stage-marker"
-            :style="{ left: (point.x * 100) + '%', top: (point.y * 100) + '%' }"
-          >
-            <span class="marker-dot" />
-            <span class="marker-cross-h" />
-            <span class="marker-cross-v" />
+          <div class="modal-stage-box">
+            <img ref="stageImg" :src="url" alt="" crossorigin="anonymous">
+            <div
+              class="modal-stage-marker"
+              :style="{ left: (point.x * 100) + '%', top: (point.y * 100) + '%' }"
+            >
+              <span class="marker-dot" />
+              <span class="marker-cross-h" />
+              <span class="marker-cross-v" />
+            </div>
+            <div class="modal-stage-hint">点击图片定位 · ←/→ 切换上/下一张</div>
           </div>
-          <div class="modal-stage-hint">点击图片或拖动标记定位</div>
         </div>
       </div>
 
@@ -153,10 +151,13 @@ onUnmounted(() => {
         </div>
 
         <div class="ctrl-row ctrl-actions">
+          <button class="btn" title="上一张(←)" @click="emit('nav', -1)">←</button>
+          <button class="btn" title="下一张(→)" @click="emit('nav', 1)">→</button>
           <button class="btn btn-danger" @click="emit('clear')">🗑️ 清除该图</button>
           <span class="ctrl-spacer" />
           <button class="btn" @click="emit('close')">取消</button>
-          <button class="btn btn-primary" @click="emit('apply', { x: point.x, y: point.y })">✓ 保存到当前会话</button>
+          <button class="btn btn-primary" @click="emit('apply', { x: point.x, y: point.y })">✓ 保存</button>
+          <button class="btn" @click="emit('applyNext', { x: point.x, y: point.y })">存并下一张 →</button>
         </div>
       </div>
 

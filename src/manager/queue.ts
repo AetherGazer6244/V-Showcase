@@ -8,11 +8,12 @@
  * ============================================================ */
 import { ref, computed } from 'vue';
 
-/** 四个可保存的数据文件(与 Tab key 对应) */
-export type FileKey = 'focal' | 'album' | 'tags' | 'config';
+/** 五个可保存的数据文件(与 Tab key 对应;焦点/方向同属焦点 Tab) */
+export type FileKey = 'focal' | 'orient' | 'album' | 'tags' | 'config';
 
 export const DATA_FILES: Record<FileKey, string> = {
   focal: 'src/site/focalPoints.ts',
+  orient: 'src/site/orientations.ts',
   album: 'src/site/albums.ts',
   tags: 'src/site/tags.ts',
   config: 'src/site/config.ts',
@@ -20,6 +21,7 @@ export const DATA_FILES: Record<FileKey, string> = {
 
 export const FILE_LABELS: Record<FileKey, string> = {
   focal: '焦点',
+  orient: '方向',
   album: '图集',
   tags: '标签',
   config: '配置',
@@ -27,6 +29,7 @@ export const FILE_LABELS: Record<FileKey, string> = {
 
 const dirtyMap = ref<Record<FileKey, boolean>>({
   focal: false,
+  orient: false,
   album: false,
   tags: false,
   config: false,
