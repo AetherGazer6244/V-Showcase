@@ -1071,3 +1071,234 @@ html, body {
   * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
   .queue-dot.on { animation: none; }
 }
+
+/* ══════════════════════════════════════════
+ * 内容写作台(博客/音乐/项目 三 Tab 共用基件)
+ * ══════════════════════════════════════════ */
+.input {
+  background: var(--glass);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 13px;
+  min-width: 0;
+}
+.input:focus { outline: none; border-color: var(--accent); }
+.input::placeholder { color: var(--text-dim); }
+
+.icon-btn {
+  background: var(--glass);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-dim);
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 0;
+}
+.icon-btn:hover { color: var(--text); border-color: var(--border-strong); }
+.icon-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.icon-btn-danger:hover { color: #e5484d; border-color: #e5484d; }
+
+.toggle {
+  background: var(--glass);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-dim);
+  padding: 6px 14px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+}
+.toggle.on { color: var(--accent); border-color: var(--accent); font-weight: 700; }
+
+.blogtab, .musictab, .projecttab {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  min-height: 0;
+}
+.mt-bar, .pt-bar { display: flex; align-items: center; gap: 8px; }
+.mt-bar-gap, .pt-bar-gap, .bt-filebar-gap { flex: 1; }
+.mt-empty, .pt-empty, .bt-empty {
+  color: var(--text-dim);
+  font-size: 13px;
+  padding: 28px 0;
+  text-align: center;
+}
+.mt-dirty, .pt-dirty, .bt-dirty {
+  color: var(--accent);
+  font-size: 12px;
+  margin: 0;
+}
+
+/* ─── 博客写作台 ─── */
+.blogtab { flex-direction: row; }
+.bt-side {
+  width: 260px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-right: 1px solid var(--border);
+  padding-right: 12px;
+  min-height: 0;
+}
+.bt-side-head { display: flex; align-items: center; }
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  width: 100%;
+}
+.seg button {
+  flex: 1;
+  background: none;
+  border: 0;
+  color: var(--text-dim);
+  padding: 7px 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+}
+.seg button.on { background: var(--accent-dim, rgba(245, 158, 11, 0.14)); color: var(--accent); font-weight: 700; }
+.bt-new { display: flex; gap: 6px; }
+.bt-new .input { flex: 1; }
+.bt-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 0;
+}
+.bt-item {
+  width: 100%;
+  text-align: left;
+  background: var(--glass);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: inherit;
+  font: inherit;
+}
+.bt-item:hover { border-color: var(--border-strong); }
+.bt-item.active { border-color: var(--accent); }
+.bt-item-title { font-size: 13px; font-weight: 600; color: var(--text); }
+.bt-item-meta { font-size: 11px; color: var(--text-dim); }
+.bt-draft {
+  margin-left: 6px;
+  font-size: 10px;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 0 4px;
+  vertical-align: 1px;
+}
+
+.bt-editor {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+.bt-editor-empty {
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+.bt-hint { font-size: 12px; opacity: 0.75; }
+.bt-filebar { display: flex; align-items: center; gap: 8px; }
+.bt-slug { width: 240px; font-family: ui-monospace, Consolas, monospace; }
+.bt-ext { color: var(--text-dim); font-size: 12px; }
+.bt-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+}
+.bt-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-dim); }
+.bt-field-wide { grid-column: 1 / -1; }
+.bt-field .toggle { align-self: flex-start; }
+.bt-body {
+  flex: 1;
+  min-height: 0;
+  resize: none;
+  background: var(--glass);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 12px;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.bt-body:focus { outline: none; border-color: var(--accent); }
+
+/* ─── 音乐写作台 ─── */
+.mt-hint { color: var(--text-dim); font-size: 12px; margin: 0; }
+.mt-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.mt-table th {
+  text-align: left;
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.mt-table td { padding: 5px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.mt-table .input { width: 100%; }
+.mt-no { color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.mt-auto { color: var(--text-dim); font-size: 12px; }
+.mt-ops { white-space: nowrap; }
+.mt-ops .icon-btn + .icon-btn { margin-left: 4px; }
+
+/* ─── 项目写作台 ─── */
+.pt-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 12px;
+  overflow: auto;
+  min-height: 0;
+  align-content: start;
+}
+.pt-card {
+  background: var(--glass);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pt-card-head { display: flex; align-items: center; gap: 8px; }
+.pt-name { flex: 1; font-weight: 700; }
+.pt-status { width: 96px; flex: none; }
+.pt-desc { resize: vertical; }
+.pt-row { display: flex; gap: 8px; }
+.pt-field { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--text-dim); flex: 1; }
+.pt-field-sm { flex: 0 0 88px; }
+
+@media (max-width: 900px) {
+  .blogtab { flex-direction: column; }
+  .bt-side { width: 100%; border-right: 0; padding-right: 0; }
+  .bt-list { max-height: 200px; }
+  .bt-editor { min-height: 320px; }
+  .bt-body { min-height: 180px; }
+}

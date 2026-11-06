@@ -4,6 +4,9 @@ import FocalTab from './FocalTab.vue';
 import AlbumTab from './AlbumTab.vue';
 import TagTab from './TagTab.vue';
 import ConfigTab from './ConfigTab.vue';
+import BlogTab from './BlogTab.vue';
+import MusicTab from './MusicTab.vue';
+import ProjectTab from './ProjectTab.vue';
 import ConfirmModal from './ConfirmModal.vue';
 import UploadBoard from './UploadBoard.vue';
 import { provideManagerState, useToast, syncDeploy, toast } from './api';
@@ -14,13 +17,16 @@ import { confirmAsync } from './confirm';
 
 provideManagerState();
 
-const activeTab = ref<'focal' | 'album' | 'tags' | 'config'>('focal');
+const activeTab = ref<'focal' | 'album' | 'tags' | 'blog' | 'music' | 'projects' | 'config'>('focal');
 const t = useToast();
 
 const subTexts: Record<typeof activeTab.value, string> = {
   focal: '为每张图标记主角位置,人脸再也不会被切',
   album: '手动图集:创建图集 → 拖图片到图集。前端按图集分 section 展示',
   tags: '给图片打标签:图集页搜索与灯箱都会用到',
+  blog: '写作台:Markdown 文章与页面,保存即重建产物,部署即发布',
+  music: '曲库管理:网易云 ID 与直链双模式,顺序即播放列表',
+  projects: '项目展示管理:状态筛选卡片,数据在 content/projects.json',
   config: '站点配置:行数/卡片宽度/拉取上限(白名单字段)',
 };
 const subText = computed(() => subTexts[activeTab.value]);
@@ -29,6 +35,9 @@ const navItems: { key: typeof activeTab.value; icon: string; label: string }[] =
   { key: 'focal', icon: '📍', label: '焦点' },
   { key: 'album', icon: '📚', label: '图集' },
   { key: 'tags', icon: '🏷', label: '标签' },
+  { key: 'blog', icon: '✍️', label: '博客' },
+  { key: 'music', icon: '🎵', label: '音乐' },
+  { key: 'projects', icon: '🗂', label: '项目' },
   { key: 'config', icon: '⚙', label: '配置' },
 ];
 
@@ -142,6 +151,9 @@ async function onSaveDeploy() {
         <FocalTab :active="activeTab === 'focal'" v-show="activeTab === 'focal'" />
         <AlbumTab :active="activeTab === 'album'" v-show="activeTab === 'album'" />
         <TagTab :active="activeTab === 'tags'" v-show="activeTab === 'tags'" />
+        <BlogTab v-show="activeTab === 'blog'" />
+        <MusicTab v-show="activeTab === 'music'" />
+        <ProjectTab v-show="activeTab === 'projects'" />
         <ConfigTab :active="activeTab === 'config'" v-show="activeTab === 'config'" />
       </main>
     </div>

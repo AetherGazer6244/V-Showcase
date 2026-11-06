@@ -65,6 +65,11 @@ import {
   validateConfigPatch,
   getByPath,
 } from './lib/config-reader.mjs';
+import {
+  listMarkdown, readMarkdown, writeMarkdown, deleteMarkdown,
+  readPlaylist, writePlaylist, validatePlaylistDoc,
+  readProjects, writeProjects, validateProjectsDoc,
+} from './lib/content-files.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TOOLS = path.resolve(__dirname, '..');         // tools/
@@ -538,17 +543,31 @@ const SYNCABLE_FILES = {
   'src/site/tags.ts': 'chore: update image tags',
   'src/site/orientations.ts': 'chore: update image orientations',
   'src/site/config.ts': 'chore: update site config',
+  'content/playlist.json': 'chore: update playlist',
+  'content/projects.json': 'chore: update projects',
 };
+
+/** 内容目录前缀规则(整目录部署,slug 动态没法进静态白名单) */
+const SYNCABLE_PREFIXES = [
+  { prefix: 'content/posts/', msg: 'feat: update blog posts' },
+  { prefix: 'content/pages/', msg: 'feat: update site pages' },
+];
 
 /**
  * 提交并推送指定数据文件(白名单校验)。
  * @param {string} filePath 形如 'src/site/focalPoints.ts'
  */
 async function syncDataFile(filePath) {
-  if (!Object.prototype.hasOwnProperty.call(SYNCABLE_FILES, filePath)) {
-    throw new Error(`不允许同步的文件: ${filePath}(白名单: ${Object.keys(SYNCABLE_FILES).join(' / ')})`);
+  let commitMsg = null;
+  if (Object.prototype.hasOwnProperty.call(SYNCABLE_FILES, filePath)) {
+    commitMsg = SYNCABLE_FILES[filePath];
+  } else {
+    const rule = SYNCABLE_PREFIXES.find((r) => filePath.startsWith(r.prefix));
+    if (!rule) {
+      throw new Error(`不允许同步的文件: ${filePath}(白名单: ${Object.keys(SYNCABLE_FILES).join(' / ')} 或 ${SYNCABLE_PREFIXES.map((r) => r.prefix + '*').join(' / ')})`);
+    }
+    commitMsg = rule.msg;
   }
-  const commitMsg = SYNCABLE_FILES[filePath];
   const branch = (await runCommand('git', ['branch', '--show-current'])).stdout;
   if (branch !== 'main') {
     throw new Error(`当前分支为 ${branch || '(detached HEAD)'}，只能从 main 同步`);
@@ -876,6 +895,102 @@ async function handle(req, res, url) {
       const doc = JSON.parse(body);
       const r = await writeOrientations(doc);
       log('💾', `写入 orientations.ts (${r.count} 项)`);
+      sendJson(res, 200, { ok: true, ...r });
+    } catch (e) {
+      sendJson(res, 400, { ok: false, error: e.message });
+    }
+    return;
+  }
+
+  // ── 内容文件(博客 posts/页面/曲库/项目,Manager 写作台)──────────
+  // GET 列表: /api/content/posts、/api/content/pages
+  if ((pathname === '/api/content/posts' || pathname === '/api/content/pages') && req.method === 'GET') {
+    try {
+      const kind = pathname.endsWith('/pages') ? 'pages' : 'posts';
+      const data = await listMarkdown(kind);
+      sendJson(res, 200, { ok: true, data: data.files });
+    } catch (e) {
+      sendJson(res, 500, { ok: false, error: e.message });
+    }
+    return;
+  }
+
+  // GET / PUT / DELETE 单篇: /api/content/posts/<name>
+  const contentMatch = /^\/api\/content\/(posts|pages)\/([A-Za-z0-9][A-Za-z0-9_-]{0,79})$/.exec(pathname);
+  if (contentMatch) {
+    const kind = contentMatch[1];
+    const name = contentMatch[2];
+    if (req.method === 'GET') {
+      try {
+        sendJson(res, 200, { ok: true, data: await readMarkdown(kind, name) });
+      } catch (e) {
+        sendJson(res, e.message.startsWith('非法文件名') ? 400 : 404, { ok: false, error: e.message });
+      }
+      return;
+    }
+    if (req.method === 'PUT') {
+      const body = await readBody(req);
+      try {
+        const { raw } = JSON.parse(body);
+        const r = await writeMarkdown(kind, name, raw);
+        log('💾', `写入 ${kind}/${name}.md(${r.bytes}B)${r.rebuilt.ok ? ' + 重建产物' : ' ⚠ 重建失败:' + (r.rebuilt.error || '')}`);
+        sendJson(res, 200, { ok: true, ...r });
+      } catch (e) {
+        sendJson(res, 400, { ok: false, error: e.message });
+      }
+      return;
+    }
+    if (req.method === 'DELETE') {
+      try {
+        const r = await deleteMarkdown(kind, name);
+        log('🗑️ ', `删除 ${kind}/${name}.md${r.rebuilt.ok ? ' + 重建产物' : ' ⚠ 重建失败'}`);
+        sendJson(res, 200, { ok: true, ...r });
+      } catch (e) {
+        sendJson(res, e.code === 'ENOENT' || e.message.includes('ENOENT') ? 404 : 400, { ok: false, error: e.message });
+      }
+      return;
+    }
+  }
+
+  // ── 曲库(playlist.json)──
+  if (pathname === '/api/content/playlist' && req.method === 'GET') {
+    try {
+      sendJson(res, 200, { ok: true, data: await readPlaylist() });
+    } catch (e) {
+      sendJson(res, e instanceof SyntaxError ? 500 : 400, { ok: false, error: e.message });
+    }
+    return;
+  }
+  if (pathname === '/api/content/playlist' && req.method === 'PUT') {
+    const body = await readBody(req);
+    try {
+      const doc = JSON.parse(body);
+      validatePlaylistDoc(doc);
+      const r = await writePlaylist(doc);
+      log('💾', `写入 playlist.json(${r.count} 首)`);
+      sendJson(res, 200, { ok: true, ...r });
+    } catch (e) {
+      sendJson(res, 400, { ok: false, error: e.message });
+    }
+    return;
+  }
+
+  // ── 项目(projects.json)──
+  if (pathname === '/api/content/projects' && req.method === 'GET') {
+    try {
+      sendJson(res, 200, { ok: true, data: await readProjects() });
+    } catch (e) {
+      sendJson(res, e instanceof SyntaxError ? 500 : 400, { ok: false, error: e.message });
+    }
+    return;
+  }
+  if (pathname === '/api/content/projects' && req.method === 'PUT') {
+    const body = await readBody(req);
+    try {
+      const doc = JSON.parse(body);
+      validateProjectsDoc(doc);
+      const r = await writeProjects(doc);
+      log('💾', `写入 projects.json(${r.count} 个)`);
       sendJson(res, 200, { ok: true, ...r });
     } catch (e) {
       sendJson(res, 400, { ok: false, error: e.message });

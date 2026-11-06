@@ -11,6 +11,8 @@
  * netease 批量解析走单次代理请求(ids 合并,边缘缓存 1h)。
  * ============================================================ */
 
+import playlistJson from '../../content/playlist.json';
+
 export interface NeteaseTrackInput {
   source: 'netease';
   /** 网易云歌曲 ID(纯数字) */
@@ -45,11 +47,13 @@ export interface Track {
 }
 
 /* ---- 曲库(本期空库上线) ----
- * 示例:
- *   { source: 'netease', id: '186016' },
- *   { source: 'url', url: 'https://.../song.mp3', title: '曲名', artist: '歌手', cover: 'https://...', lrc: '[00:00.00] …' },
+ * 数据在 content/playlist.json(Manager 音乐 Tab 读写),
+ * 此处仅类型化装载。两种条目:
+ *   { "source": "netease", "id": "186016" }
+ *   { "source": "url", "url": "https://.../song.mp3", "title": "曲名",
+ *     "artist": "歌手", "cover": "https://...", "lrc": "[00:00.00] …" }
  */
-export const PLAYLIST: TrackInput[] = [];
+export const PLAYLIST: TrackInput[] = playlistJson as TrackInput[];
 
 /** url 输入 → 稳定 id(取路径段做可读 id;同地址恒等) */
 export function urlTrackId(url: string): string {

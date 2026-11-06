@@ -250,6 +250,111 @@ export async function saveOrientations(doc: OrientationsDoc): Promise<number | n
   return r.count ?? 0;
 }
 
+/* ── 内容文件(博客 posts/页面/曲库/项目) ───── */
+
+export interface ContentFileMeta {
+  slug: string;
+  title: string;
+  date: string;
+  draft: boolean;
+  size: number;
+  mtime: number;
+}
+
+export async function listContent(kind: 'posts' | 'pages'): Promise<ContentFileMeta[] | null> {
+  const r = await api<{ ok: boolean; data?: ContentFileMeta[]; error?: string }>('GET', `/api/content/${kind}`);
+  if (!r.ok) {
+    toast(`读取 ${kind} 列表失败: ` + (r.error ?? ''), 'error');
+    return null;
+  }
+  return r.data ?? [];
+}
+
+export async function readContent(kind: 'posts' | 'pages', name: string): Promise<string | null> {
+  const r = await api<{ ok: boolean; data?: { raw: string }; error?: string }>('GET', `/api/content/${kind}/${name}`);
+  if (!r.ok) {
+    toast('读取失败: ' + (r.error ?? ''), 'error');
+    return null;
+  }
+  return r.data?.raw ?? '';
+}
+
+/** 保存后服务端会顺带重建 src/generated;返回是否成功 */
+export async function saveContent(kind: 'posts' | 'pages', name: string, raw: string): Promise<boolean> {
+  const r = await api<{ ok: boolean; rebuilt?: { ok: boolean; error?: string }; error?: string }>('PUT', `/api/content/${kind}/${name}`, { raw });
+  if (!r.ok) {
+    toast('保存失败: ' + (r.error ?? ''), 'error');
+    return false;
+  }
+  if (r.rebuilt && !r.rebuilt.ok) toast('已保存,但构建产物重建失败(下次构建会重试)', 'warn');
+  return true;
+}
+
+export async function deleteContent(kind: 'posts' | 'pages', name: string): Promise<boolean> {
+  const r = await api<{ ok: boolean; error?: string }>('DELETE', `/api/content/${kind}/${name}`);
+  if (!r.ok) {
+    toast('删除失败: ' + (r.error ?? ''), 'error');
+    return false;
+  }
+  return true;
+}
+
+export interface MTrack {
+  source: 'netease' | 'url';
+  id?: string;
+  url?: string;
+  title?: string;
+  artist?: string;
+  cover?: string;
+  lrc?: string;
+}
+
+export async function loadPlaylist(): Promise<MTrack[] | null> {
+  const r = await api<{ ok: boolean; data?: MTrack[]; error?: string }>('GET', '/api/content/playlist');
+  if (!r.ok) {
+    toast('读取曲库失败: ' + (r.error ?? ''), 'error');
+    return null;
+  }
+  return r.data ?? [];
+}
+
+export async function savePlaylist(doc: MTrack[]): Promise<boolean> {
+  const r = await api<{ ok: boolean; count?: number; error?: string }>('PUT', '/api/content/playlist', doc);
+  if (!r.ok) {
+    toast('保存曲库失败: ' + (r.error ?? ''), 'error');
+    return false;
+  }
+  return true;
+}
+
+export interface MProject {
+  name: string;
+  desc: string;
+  status: 'active' | 'wip' | 'archived';
+  tech: string[];
+  link?: string;
+  repo?: string;
+  year?: string;
+}
+
+export async function loadProjects(): Promise<MProject[] | null> {
+  const r = await api<{ ok: boolean; data?: MProject[]; error?: string }>('GET', '/api/content/projects');
+  if (!r.ok) {
+    toast('读取项目失败: ' + (r.error ?? ''), 'error');
+    return null;
+  }
+  return r.data ?? [];
+}
+
+export async function saveProjects(doc: MProject[]): Promise<boolean> {
+  const r = await api<{ ok: boolean; count?: number; error?: string }>('PUT', '/api/content/projects', doc);
+  if (!r.ok) {
+    toast('保存项目失败: ' + (r.error ?? ''), 'error');
+    return false;
+  }
+  return true;
+}
+
 /* ── 图片列表(代理 + 兜底) ───────────────── */
 
 export async function loadImages(): Promise<{ list: MImage[]; usedFallback: boolean }> {
