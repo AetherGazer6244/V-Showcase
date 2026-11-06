@@ -4,6 +4,7 @@ import { migrateLegacyStorage } from './storageMigration';
 import { initSettings } from './settings';
 import { initLikes } from './likes';
 import { initFireflies } from './fireflies';
+import { initPlayer } from './player';
 /* 载入顺序 = 级联优先级:overrides 依赖「后载入者胜」,顺序不可调整 */
 import './styles/base.css';
 import './styles/wall.css';
@@ -20,4 +21,5 @@ migrateLegacyStorage();
 initSettings();
 initLikes();
 initFireflies();
+void initPlayer();     // 异步解析曲库(空库/代理失败均静默,UI 兜底)
 createApp(App).mount('#app');

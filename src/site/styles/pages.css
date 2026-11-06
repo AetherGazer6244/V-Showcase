@@ -1,6 +1,6 @@
 /* ============================================================
  * V-Showcase 站点样式 — 内容页公共布局
- * 内容: 博客列表卡片 / (M3:音乐曲目行、项目栅格、关于布局)
+ * 内容: 博客列表卡片 / 音乐曲目行 / 项目栅格 / 关于页
  * ============================================================ */
 
 /* ============ 博客列表 ============ */
@@ -97,4 +97,238 @@
   .blog-card-cover { min-height: 0; height: 150px; }
   .blog-card-body { padding: 14px 16px; }
   .blog-card-title { font-size: 1.1rem; }
+}
+
+/* ============ 音乐页 ============ */
+.music-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.track-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.track-card {
+  display: grid;
+  grid-template-columns: 34px 52px 1fr auto auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 10px 14px;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+}
+.track-card:disabled { opacity: 0.55; cursor: not-allowed; }
+.track-card:disabled:hover { transform: none; box-shadow: var(--card-shadow); }
+
+.track-card.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.track-no {
+  text-align: center;
+  color: var(--text-sub);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-sm);
+}
+.track-card.active .track-no { color: var(--accent-text); font-weight: 800; }
+
+.track-cover {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--img-bg);
+}
+.track-cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.track-cover-fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  opacity: 0.5;
+  font-size: 1.3rem;
+  background: linear-gradient(135deg, var(--accent-soft), transparent);
+}
+
+.track-meta { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.track-title {
+  color: var(--text-main);
+  font-weight: 700;
+  font-size: var(--fs-md);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.track-card.active .track-title { color: var(--accent-text); }
+.track-artist {
+  color: var(--text-sub);
+  font-size: var(--fs-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.track-source { cursor: default; }
+.track-state {
+  min-width: 3.5em;
+  text-align: right;
+  color: var(--accent-text);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+}
+
+.music-error {
+  margin-top: var(--space-4);
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(180, 30, 50, 0.35);
+  background: rgba(180, 30, 50, 0.08);
+  color: #b41e32;
+  font-size: var(--fs-sm);
+}
+
+.empty-hint {
+  color: var(--text-sub);
+  font-size: var(--fs-xs);
+  opacity: 0.8;
+  font-family: ui-monospace, Consolas, monospace;
+}
+
+@media (max-width: 700px) {
+  .track-card { grid-template-columns: 30px 44px 1fr; }
+  .track-source, .track-state { display: none; }
+  .track-cover { width: 44px; height: 44px; }
+}
+
+/* ============ 项目页 ============ */
+.projects-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+
+.project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-4);
+}
+
+.project-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: 20px 22px;
+}
+
+.project-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.project-name { font-size: var(--fs-lg); font-weight: 800; color: var(--text-main); }
+
+.project-status-active { background: var(--accent-soft); color: var(--accent-text); font-weight: 700; }
+
+.project-desc {
+  color: var(--text-sub);
+  font-size: var(--fs-sm);
+  line-height: 1.75;
+  flex: 1;
+}
+
+.project-tech { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.project-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-3);
+}
+.project-year { color: var(--text-sub); font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
+.project-links { display: flex; gap: var(--space-2); }
+.project-links .btn { padding: 5px 14px; font-size: var(--fs-xs); }
+
+/* ============ 关于页 ============ */
+.about-identity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+}
+
+.about-avatar {
+  position: relative;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--img-bg);
+  border: 2px solid var(--glass-border-strong);
+  box-shadow: var(--card-shadow);
+  flex: none;
+}
+.about-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.about-avatar-letter {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, var(--brand-1), var(--brand-2));
+}
+
+.about-recent {
+  margin-top: var(--space-6);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border);
+}
+.about-recent-head {
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  color: var(--text-main);
+  margin-bottom: var(--space-3);
+}
+.about-recent-list { display: flex; flex-direction: column; gap: var(--space-2); }
+.about-recent-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--glass-plain);
+  text-decoration: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.about-recent-item:hover { border-color: var(--accent); box-shadow: var(--hover-shadow-sm); }
+.about-recent-title {
+  color: var(--text-main);
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.about-recent-date { color: var(--text-sub); font-size: var(--fs-xs); flex: none; }
+
+@media (max-width: 700px) {
+  .about-identity { flex-direction: column; text-align: center; gap: var(--space-3); }
+  .about-recent-item { flex-direction: column; align-items: flex-start; gap: 2px; }
 }
