@@ -34,6 +34,8 @@ export default defineConfig(({ mode }) => {
           rollupOptions: {
             input: {
               index: r('./index.html'),
+              blog: r('./blog.html'),
+              post: r('./post.html'),
               gallery: r('./gallery.html'),
               settings: r('./settings.html'),
               '404': r('./404.html'),

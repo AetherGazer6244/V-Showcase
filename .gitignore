@@ -22,6 +22,9 @@ node_modules/
 # Cloudflare Pages 构建产物
 /dist/
 
+# 博客构建期产物(tools/posts/build-posts.mjs 生成,由 content/ 派生)
+/src/generated/
+
 # Manager 本地构建产物(npm run build:manager,仅本机使用不上传)
 /dist-manager/
 

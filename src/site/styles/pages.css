@@ -1,4 +1,100 @@
 /* ============================================================
- * V-Showcase 站点样式 — 内容页(博客列表/音乐/项目/关于)
- * (M3 填充:列表卡片、曲目行、项目栅格、关于布局)
+ * V-Showcase 站点样式 — 内容页公共布局
+ * 内容: 博客列表卡片 / (M3:音乐曲目行、项目栅格、关于布局)
  * ============================================================ */
+
+/* ============ 博客列表 ============ */
+.blog-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-5);
+}
+
+.blog-card {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  overflow: hidden;
+}
+
+.blog-card-cover {
+  position: relative;
+  height: 100%;
+  min-height: 168px;
+  background: var(--img-bg);
+}
+.blog-card-cover img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  cursor: zoom-in;
+  transition: transform 0.25s ease;
+}
+.blog-card:hover .blog-card-cover img { transform: scale(1.03); }
+
+/* 无图占位:琥珀渐变 + 大引号意象 */
+.blog-cover-fallback {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--accent-soft), transparent 65%),
+              linear-gradient(315deg, var(--chip-bg), transparent 55%);
+}
+.blog-cover-fallback::after {
+  content: "✎";
+  position: absolute;
+  right: 14px;
+  bottom: 6px;
+  font-size: 2.6rem;
+  color: var(--accent);
+  opacity: 0.28;
+}
+
+.blog-card-body {
+  padding: 18px 22px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.blog-card-title {
+  font-size: var(--fs-xl);
+  font-weight: 800;
+  line-height: 1.4;
+  color: var(--text-main);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.blog-card:hover .blog-card-title { color: var(--accent-text); }
+
+.blog-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  color: var(--text-sub);
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.03em;
+}
+.blog-meta-dot { opacity: 0.55; }
+
+.blog-card-excerpt {
+  color: var(--text-sub);
+  font-size: var(--fs-sm);
+  line-height: 1.75;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@media (max-width: 700px) {
+  .blog-card { grid-template-columns: 1fr; }
+  .blog-card-cover { min-height: 0; height: 150px; }
+  .blog-card-body { padding: 14px 16px; }
+  .blog-card-title { font-size: 1.1rem; }
+}

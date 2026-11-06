@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script>try{var s=JSON.parse(localStorage.getItem("vshowcase.settings")||"{}").theme,d=s==="dark"||((!s||s==="auto")&&window.matchMedia&&matchMedia("(prefers-color-scheme: dark)").matches);if(d)document.documentElement.dataset.theme="dark"}catch(e){}</script>
+  <meta name="theme-color" content="#fdfdfd">
+  <!-- 兜底壳:生产环境每篇文章的独立页由 build:post-pages 生成到
+       dist/posts/<slug>/index.html(带专属 title/OG/canonical 与 __POST_SLUG__);
+       本文件服务开发模式(post.html?slug=)与未命中 slug 的兜底 -->
+  <meta name="description" content="V-Showcase 文章">
+  <title>文章 · V-Showcase</title>
+  <link rel="canonical" href="https://vshowcase.pages.dev/blog.html">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="V-Showcase">
+  <meta property="og:title" content="文章 · V-Showcase">
+  <meta property="og:description" content="V-Showcase 文章">
+  <meta property="og:image" content="https://bu.dusays.com/2026/08/25/6a8da73da2991.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <script>window.__VIEW__ = 'post';</script>
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module" src="/src/site/main.ts"></script>
+</body>
+</html>
