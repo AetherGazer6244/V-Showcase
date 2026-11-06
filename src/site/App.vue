@@ -91,7 +91,7 @@ onMounted(() => {
 
   <footer class="site-footer">
     <div class="footer-capsule">
-      <a class="footer-link" href="https://github.com/Cecilian-Elysian/V-Showcase" target="_blank" rel="noopener">GitHub</a>
+      <a class="footer-link" href="https://github.com/AetherGazer6244/V-Showcase" target="_blank" rel="noopener">GitHub</a>
       <template v-if="visit.totals.value">
         <span class="footer-dot" aria-hidden="true">·</span>
         <span class="footer-stats">

@@ -121,7 +121,7 @@ schema.sql      D1 表结构（daily_stats / visitors / likes）
 
 - 项目链接 https://vshowcase.pages.dev/
 
-- 仓库地址：https://github.com/Cecilian-Elysian/V-Showcase
+- 仓库地址：https://github.com/AetherGazer6244/V-Showcase
 
 - AI 焦点分析：[@vladmandic/face-api](https://github.com/vladmandic/face-api)
 - 本地图集管理: Manager 拖拽（`npm run build:manager` 本机构建，产物不入库）
