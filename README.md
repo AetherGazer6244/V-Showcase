@@ -24,11 +24,32 @@ npm run dev
 
 ## 页面
 
-- index.html — 主页（流动图片墙）
-- gallery.html — 图集页（相册网格 + 瀑布流）
-- settings.html — 访客偏好设置
+- index.html — 主页(流动图片墙)
+- gallery.html — 图集页(相册网格 + 瀑布流)
+- blog.html — 博客列表(`content/posts/*.md` 构建期渲染)
+- post.html + /posts/<slug>/ — 文章详情(每篇一个静态页,含 TOC)
+- music.html — 音乐页(网易云 ID + 直链双曲库,全站常驻播放条)
+- projects.html — 项目页(状态筛选卡片,数据在 `content/projects.json`)
+- about.html — 关于页(`content/pages/about.md` + 最近动态)
+- settings.html — 访客偏好设置(主题三态/动效总开关/阅读偏好)
 - 404.html — Cloudflare 404 页
-- manager.html — 本地 Manager 编辑器（不部署）
+- manager.html — 本地 Manager 写作台(不部署)
+
+## 内容写作(博客 / 音乐 / 项目)
+
+站点内容都在 `content/` 目录,由 Manager 写作台(本地 `127.0.0.1:8002`)或直接改文件维护:
+
+```bash
+npm run dev        # 写作台联调(dev script 已内置 build:posts,改 md 即时可见)
+npm run build      # = build:posts(生成 src/generated + 每篇文章的 dist/posts/<slug>/index.html)→ vite build → build:post-pages
+```
+
+- `content/posts/*.md` — 博客文章(front-matter:title 必填,date/excerpt/cover/draft 可选)
+- `content/pages/about.md` — 关于页正文(同一管线)
+- `content/playlist.json` — 曲库(`{"source":"netease","id":"歌曲ID"}` 或 `{"source":"url","url":"直链","title":"曲名"}`)
+- `content/projects.json` — 项目卡片
+
+Manager「博客 / 音乐 / 项目」Tab 保存即校验并重建产物;「保存并部署」把对应文件 git 提交推送,由 Cloudflare Pages 自动构建上线。
 
 ## 部署
 
@@ -79,12 +100,13 @@ npm run db:schema:remote           # 建表（本地开发用 db:schema:local）
 ## 文件结构
 
 ```
-src/shared      前后端共享：types / utils / apiClient
-src/site        Viewer 站点：视图组件 + likes/visit/settings/wallTouch 单例模块 + 样式
-src/manager     本地 Manager 编辑器（焦点 / 图集 / 标签 / 配置 四个 Tab）
-functions/api   Pages Functions：images 图床代理 / visit 访客统计 / likes 点赞
-tools/          本地启动器 + AI 工具 + node 侧测试
-schema.sql      D1 表结构（daily_stats / visitors / likes）
+src/shared      前后端共享:types / utils / apiClient
+src/site        Viewer 站点:视图组件 + likes/visit/settings/player 单例模块 + 样式
+src/manager     本地 Manager 写作台(焦点 / 图集 / 标签 / 博客 / 音乐 / 项目 / 配置 七个 Tab)
+content/        站点内容:posts 博客文章 / pages 页面 / playlist.json / projects.json
+functions/api   Pages Functions:images 图床代理 / music 网易云代理 / visit 统计 / likes 点赞
+tools/          本地启动器 + 内容管线(posts 构建脚本) + AI 工具 + node 侧测试
+schema.sql      D1 表结构(daily_stats / visitors / likes)
 ```
 
 ---
@@ -106,6 +128,11 @@ schema.sql      D1 表结构（daily_stats / visitors / likes）
 - [x] 收藏夹(灯箱 ⭐ / 瀑布流角标 / 设置页「我的收藏」区块;localStorage 有序列表,导航「收藏」直达;图床下架自动过滤)
 - [x] 屏保模式(全屏交叉淡入 + Ken Burns,焦点防裁脸;设置页可调间隔/顺序/缩放,闲置自动进入默认关,`?screensaver=1` 直达)
 - [x] 主页内容动态轮换(登台窗口 + 每行重排,定时换掉一批图;设置页可开关/调间隔;系统「减少动态效果」时自动停)
+- [x] 设计系统改版(明亮主题默认 + 琥珀品牌色 + token 体系,主题三态 light/dark/auto,动效总开关,暗色萤火特效)
+- [x] 博客(`content/posts` Markdown 管线 + 列表/详情页 + TOC + 阅读偏好 + 每篇独立静态页)
+- [x] 音乐页(网易云 ID + 直链双曲库,`/api/music` 代理,全站常驻播放条,歌词轴,MPA 跨页续播)
+- [x] 项目页(状态筛选卡片)与关于页(siteConfig 身份卡 + about.md + 最近动态)
+- [x] Manager 写作台(博客/音乐/项目三 Tab,保存即校验重建,单文件部署)
 - [ ] 设置搭建(站长端深水区:数据源切换 UI)
 
 
