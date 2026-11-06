@@ -16,10 +16,10 @@
  *   前端据此隐藏统计段,不报错不打扰。
  *
  * 初始化 D1:
- *   npx wrangler d1 create lumina-db → id 填入 wrangler.toml
- *   npx wrangler d1 execute lumina-db --remote --file schema.sql
+ *   npx wrangler d1 create v-showcase-db → id 填入 wrangler.toml
+ *   npx wrangler d1 execute v-showcase-db --remote --file schema.sql
  * 站长查明细(无网页端,走 CLI):
- *   npx wrangler d1 execute lumina-db --remote --command "SELECT * FROM daily_stats"
+ *   npx wrangler d1 execute v-showcase-db --remote --command "SELECT * FROM daily_stats"
  * ============================================================ */
 
 /** 明显爬虫 UA 直接跳过,不写库 */

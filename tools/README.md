@@ -1,4 +1,4 @@
-# Lumina Tools · 编辑器
+# V-Showcase Tools · 编辑器
 
 本地运行的服务与 AI 工具，为 `../src/site/focalPoints.ts` 产出焦点数据 + `../src/site/albums.ts` 提供图集管理 API。
 Manager 源码位于 `../src/manager/`（Vue 3，正常入库），构建产物在 `../dist-manager/`（Git 忽略，仅本机）；Tools 源码正常进入 GitHub，但不会进入 Cloudflare 的 `dist/`。
@@ -40,7 +40,7 @@ Pages Function 只有 wrangler 会提供，纯 `npm run dev`（Vite）只会显�
 **Windows：** 双击 `site.bat`
 **macOS / Linux：** `./tools/site.sh`
 
-服务跑在独立的 `Lumina Site` 黑窗口里，关掉它或在里面 Ctrl+C 即停止。改完 `src/` 再跑一次即可（每次启动都会重新 build）。
+服务跑在独立的 `V-Showcase Site` 黑窗口里，关掉它或在里面 Ctrl+C 即停止。改完 `src/` 再跑一次即可（每次启动都会重新 build）。
 
 ### 1. 启动可视化编辑器
 
@@ -101,7 +101,7 @@ Manager 有两个 tab：
 4. **✓ 保存** → 写入 localStorage（本次会话）
 5. **🗑️ 清除** → 删除该图的焦点
 
-> 编辑结果保存在浏览器 `localStorage.lumina.focal.local`，
+> 编辑结果保存在浏览器 `localStorage.vshowcase.focal.local`，
 > 只在本浏览器有效，**点"💾 保存到 viewer"才会写入文件并 git 可见**。
 
 ### 📚 图集 tab
@@ -124,8 +124,8 @@ Manager 有两个 tab：
 4. 点 **💾 保存到 viewer** → 写入 `src/site/albums.ts`
 5. 点 **↥ 同步并部署** 提交推送(或手动 `git add src/site/albums.ts && git commit && git push`)触发部署
 
-> 编辑结果保存在 `localStorage.lumina.album.local`，仅本浏览器有效。
-> 手动覆盖：`localStorage.setItem('lumina.album.local', JSON.stringify({ url: 'albumId' }))`，刷新即生效。
+> 编辑结果保存在 `localStorage.vshowcase.album.local`，仅本浏览器有效。
+> 手动覆盖：`localStorage.setItem('vshowcase.album.local', JSON.stringify({ url: 'albumId' }))`，刷新即生效。
 
 ---
 

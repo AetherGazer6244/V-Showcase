@@ -1,6 +1,6 @@
 @echo off
 REM ============================================================
-REM  Lumina Editor launcher
+REM  V-Showcase Editor launcher
 REM ------------------------------------------------------------
 REM  Rules for this file (learned the hard way):
 REM    1. MUST be CRLF  -- cmd.exe silently mis-parses LF-only .bat
@@ -15,7 +15,7 @@ cd /d "%~dp0"
 
 echo.
 echo ============================================================
-echo   Lumina Editor - local server
+echo   V-Showcase Editor - local server
 echo ============================================================
 echo.
 

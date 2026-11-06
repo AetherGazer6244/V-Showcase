@@ -7,7 +7,7 @@
  * ============================================================ */
 import { ref } from 'vue';
 
-const BANNER_LS_KEY = 'lumina.banner.dismissed';
+const BANNER_LS_KEY = 'vshowcase.banner.dismissed';
 
 /** 已 dismiss 的消息集合:启动时从 localStorage 读入,
  *  否则「不再提示」刷新即失效(只写不读)。 */

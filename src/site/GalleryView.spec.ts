@@ -132,11 +132,11 @@ describe('GalleryView 全部模式(masonry)', () => {
 
     await favs[0].trigger('click');
     expect(favs[0].classes()).toContain('faved');
-    expect(JSON.parse(localStorage.getItem('lumina.favs') || '[]')).toEqual(['https://a/1.jpg']);
+    expect(JSON.parse(localStorage.getItem('vshowcase.favs') || '[]')).toEqual(['https://a/1.jpg']);
 
     await favs[0].trigger('click');
     expect(favs[0].classes()).not.toContain('faved');
-    expect(localStorage.getItem('lumina.favs')).toBe('[]');
+    expect(localStorage.getItem('vshowcase.favs')).toBe('[]');
 
     // 点击角标不进灯箱(click.stop)
     expect(lb.isOpen.value).toBe(false);

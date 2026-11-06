@@ -70,7 +70,7 @@ onMounted(() => {
 
 <template>
   <header class="navbar">
-    <div><h1 class="navbar-title">Illusium Wall</h1></div>
+    <div><h1 class="navbar-title">V-Showcase</h1></div>
     <nav class="navbar-nav" aria-label="主导航">
       <a
         v-for="item in navItems"
@@ -91,7 +91,7 @@ onMounted(() => {
 
   <footer class="site-footer">
     <div class="footer-capsule">
-      <a class="footer-link" href="https://github.com/Cecilian-Elysian/Lumina" target="_blank" rel="noopener">GitHub</a>
+      <a class="footer-link" href="https://github.com/Cecilian-Elysian/V-Showcase" target="_blank" rel="noopener">GitHub</a>
       <template v-if="visit.totals.value">
         <span class="footer-dot" aria-hidden="true">·</span>
         <span class="footer-stats">

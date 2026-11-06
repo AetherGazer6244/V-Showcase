@@ -1,7 +1,7 @@
 {
-  "name": "lumina-tools",
+  "name": "v-showcase-tools",
   "version": "1.0.0",
-  "description": "Lumina 编辑器 + AI 批量分析工具（本地运行，不部署）",
+  "description": "V-Showcase 编辑器 + AI 批量分析工具（本地运行，不部署）",
   "private": true,
   "type": "module",
   "main": "server/serve.mjs",

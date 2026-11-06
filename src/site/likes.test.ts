@@ -1,4 +1,4 @@
-﻿import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 /* likes/composables 都是模块级单例 → 每个用例 resetModules 取全新实例,
  * 动态导入保证测试与被测代码共享同一份单例注册表 */
@@ -56,7 +56,7 @@ describe('useLikes — 点赞单例', () => {
 
     await flushMicrotasks();
     expect(likeCount('https://a/1.jpg')).toBe(5); // 服务端权威值
-    expect(JSON.parse(localStorage.getItem('lumina.liked') || '[]')).toContain('https://a/1.jpg');
+    expect(JSON.parse(localStorage.getItem('vshowcase.liked') || '[]')).toContain('https://a/1.jpg');
   });
 
   it('取消点赞 → delta=-1,计数回落且无负数', async () => {
@@ -92,7 +92,7 @@ describe('useLikes — 点赞单例', () => {
     await flushMicrotasks();
     expect(likeCount('https://b/2.jpg')).toBe(3); // 回滚
     expect(isLiked('https://b/2.jpg')).toBe(false); // 回滚
-    expect(JSON.parse(localStorage.getItem('lumina.liked') || '[]')).not.toContain('https://b/2.jpg');
+    expect(JSON.parse(localStorage.getItem('vshowcase.liked') || '[]')).not.toContain('https://b/2.jpg');
     expect(useErrorBanner().msg.value).toContain('点赞失败');
   });
 

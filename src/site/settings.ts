@@ -56,7 +56,7 @@ export interface SiteSettings {
   screensaver: ScreenSaverPrefs;
 }
 
-const LS_KEY = 'lumina.settings';
+const LS_KEY = 'vshowcase.settings';
 
 export const ROWS_RANGE = { min: 1, max: 6 } as const;
 export const WIDTH_RANGE = { min: 180, max: 560 } as const;

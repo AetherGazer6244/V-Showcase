@@ -92,7 +92,7 @@ async function onSaveDeploy() {
   <div class="shell">
     <!-- 侧边栏:导航 + 操作队列 -->
     <aside class="side">
-      <div class="side-brand"><span class="side-brand-icon">✦</span> Lumina 管理器</div>
+      <div class="side-brand"><span class="side-brand-icon">✦</span> V-Showcase 管理器</div>
 
       <nav class="side-nav">
         <button

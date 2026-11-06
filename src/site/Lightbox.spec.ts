@@ -153,11 +153,11 @@ describe('Lightbox 收藏', () => {
     expect(btn.text()).toBe('☆');
     await btn.trigger('click');
     expect(btn.text()).toBe('★');
-    expect(JSON.parse(localStorage.getItem('lumina.favs') || '[]')).toEqual(['https://a/1.jpg']);
+    expect(JSON.parse(localStorage.getItem('vshowcase.favs') || '[]')).toEqual(['https://a/1.jpg']);
 
     await btn.trigger('click');
     expect(btn.text()).toBe('☆');
-    expect(localStorage.getItem('lumina.favs')).toBe('[]');
+    expect(localStorage.getItem('vshowcase.favs')).toBe('[]');
     wrapper.unmount();
   });
 

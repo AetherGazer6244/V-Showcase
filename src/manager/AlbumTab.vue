@@ -14,7 +14,7 @@ import { confirmAsync } from './confirm';
 /** App 同时挂载四个 Tab,只有 active 的才有资格把按钮 Teleport 到顶栏 */
 defineProps<{ active: boolean }>();
 
-const LS_ALBUM_KEY = 'lumina.album.local';
+const LS_ALBUM_KEY = 'vshowcase.album.local';
 
 const state = useManagerState();
 

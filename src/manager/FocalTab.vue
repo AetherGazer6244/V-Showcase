@@ -14,7 +14,7 @@ import { confirmAsync } from './confirm';
 /** App 同时挂载四个 Tab,只有 active 的才有资格把按钮 Teleport 到顶栏 */
 defineProps<{ active: boolean }>();
 
-const LS_FOCAL_KEY = 'lumina.focal.local';
+const LS_FOCAL_KEY = 'vshowcase.focal.local';
 
 const state = useManagerState();
 
@@ -49,7 +49,7 @@ const dirtyCount = computed(() => Object.keys(lsFocal).length + focalRemoved.val
 const removedCount = computed(() => focalRemoved.value.size);
 
 /* ── 方向标记(与焦点同 Tab 管理;独立数据文件 orientations.ts) ── */
-const LS_ORIENT_KEY = 'lumina.orient.local';
+const LS_ORIENT_KEY = 'vshowcase.orient.local';
 const staticOrient = ref<OrientationsDoc>({});
 const lsOrient = reactive<OrientationsDoc>({});
 /** 本次会话显式归零的 url(保存时要从静态里删掉) */
@@ -130,7 +130,7 @@ async function fetchImages() {
 }
 
 /* ── 网格视图模式:裁剪+焦点 / 完整图 ── */
-const LS_VIEW_KEY = 'lumina.focal.viewmode';
+const LS_VIEW_KEY = 'vshowcase.focal.viewmode';
 type ViewMode = 'crop' | 'full';
 
 function readView(): ViewMode {
@@ -146,7 +146,7 @@ function toggleView() {
 }
 
 /* ── 网格密度三档(小/中/大) ── */
-const LS_ICON_KEY = 'lumina.focal.icon';
+const LS_ICON_KEY = 'vshowcase.focal.icon';
 type IconSize = 's' | 'm' | 'l';
 const ICON_PX: Record<IconSize, string> = { s: '96px', m: '132px', l: '200px' };
 const ICON_LABEL: Record<IconSize, string> = { s: '小格', m: '中格', l: '大格' };

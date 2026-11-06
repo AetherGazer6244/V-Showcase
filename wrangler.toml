@@ -1,4 +1,4 @@
-name = "illusium"
+name = "vshowcase"
 compatibility_date = "2024-09-23"
 
 # Cloudflare Pages wrangler.toml — 仅 Pages 兼容字段
@@ -8,10 +8,10 @@ compatibility_date = "2024-09-23"
 pages_build_output_dir = "./dist"
 
 # ---- D1 数据库(访客统计 + 图片点赞) ----
-# 绑定信息(npx wrangler d1 create lumina-db 生成的真实 id):
+# 绑定信息(npx wrangler d1 create v-showcase-db 生成的真实 id):
 #   ⚠ 占位 id 会让 CF 部署直接失败(2026-10 排查:连续 5 次构建失败即此原因)
-#   如需重建:npx wrangler d1 create lumina-db 后把新 id 填到下方 database_id
+#   如需重建:npx wrangler d1 create v-showcase-db 后把新 id 填到下方 database_id
 [[d1_databases]]
 binding = "DB"
-database_name = "lumina-db"
-database_id = "e6a69bc3-89a4-4ec8-a626-7f20a533f707"
+database_name = "v-showcase-db"
+database_id = "c5963de3-20fd-439b-8f8b-86a5d3d4ca47"

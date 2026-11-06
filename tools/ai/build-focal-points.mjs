@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* ============================================================
- * Lumina — AI 批量焦点分析工具
+ * V-Showcase — AI 批量焦点分析工具
  * ------------------------------------------------------------
  * 用 @vladmandic/face-api 检测每张图的人脸,
  * 自动生成 viewer 的 src/site/focalPoints.ts。
@@ -233,7 +233,7 @@ async function decodeToTensor(buf) {
 
 // ── 主流程 ─────────────────────────────────
 async function main() {
-  log('✨', 'Lumina AI 批量焦点分析');
+  log('✨', 'V-Showcase AI 批量焦点分析');
   log('⚙️', `strategy=${STRATEGY}, source=${SOURCE}, concurrency=${CONCURRENCY}`);
 
   // 1. tf 后端(WASM 优先)+ 模型权重

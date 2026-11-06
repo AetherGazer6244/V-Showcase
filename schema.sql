@@ -1,9 +1,9 @@
 -- ============================================================
--- Lumina D1 schema — 访客统计 + 图片点赞
+-- V-Showcase D1 schema — 访客统计 + 图片点赞
 -- ------------------------------------------------------------
 -- 初始化:
---   本地: npx wrangler d1 execute lumina-db --local  --file schema.sql
---   线上: npx wrangler d1 execute lumina-db --remote --file schema.sql
+--   本地: npx wrangler d1 execute v-showcase-db --local  --file schema.sql
+--   线上: npx wrangler d1 execute v-showcase-db --remote --file schema.sql
 --
 -- 幂等:全部 IF NOT EXISTS,可重复执行。
 -- 键约定:likes.url = Image.url(原图直链),与焦点/图集/标签一致。

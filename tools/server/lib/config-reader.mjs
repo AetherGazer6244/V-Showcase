@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* Lumina Tools — 共享数据文件读取器。
+/* V-Showcase Tools — 共享数据文件读取器。
  * 安全要点:历史版本用 (0, eval) 解析 viewer 文件,混入表达式会被真的执行;
  * 现版本只用 acorn 静态解析,只接受 Object/Array/Literal,任何其它节点抛错,绝不执行。 */
 import fs from 'node:fs/promises';
@@ -223,7 +223,7 @@ const ALBUMS_HEADER = `/* ======================================================
  * 注意:纯字面量文件(禁 import/类型注解),由 tools 服务端 acorn 解析
  *
  * 浏览器侧(可在 DevTools 临时覆盖):
- *   localStorage.setItem('lumina.album.local', JSON.stringify({
+ *   localStorage.setItem('vshowcase.album.local', JSON.stringify({
  *     'https://...jpg': 'abc123'
  *   }))
  * ============================================================ */\n`;
@@ -354,7 +354,7 @@ export function getByPath(obj, p) {
 /* ---- 标签(tags)读写:src/site/tags.ts(格式与规则见 TAGS_HEADER) ---- */
 
 const TAGS_HEADER = `/* ============================================================
- * Lumina — 图片标签数据(纯字面量)
+ * V-Showcase — 图片标签数据(纯字面量)
  * ------------------------------------------------------------
  * 由本地 manager 可视化编辑器(标签 Tab)离线产出。
  * 格式:{ [图片原图 url]: string[] 标签数组 }
@@ -365,7 +365,7 @@ const TAGS_HEADER = `/* ========================================================
  * 注意:纯字面量文件(禁 import/类型注解),由 tools 服务端 acorn 解析
  *
  * 浏览器侧(可在 DevTools 临时覆盖,null = 清空该图标签):
- *   localStorage.setItem('lumina.tags.local', JSON.stringify({
+ *   localStorage.setItem('vshowcase.tags.local', JSON.stringify({
  *     'https://...jpg': ['德克萨斯', '立绘']
  *   }))
  * ============================================================ */\n`;
@@ -438,7 +438,7 @@ export async function writeTags(doc) {
 /* ---- 方向标记(orientations)读写:src/site/orientations.ts ---- */
 
 const ORIENTATIONS_HEADER = `/* ============================================================
- * Lumina — 图片方向标记数据(纯字面量)
+ * V-Showcase — 图片方向标记数据(纯字面量)
  * ------------------------------------------------------------
  * 图床转存会剥掉 EXIF,部分图片以横躺姿态存储;这里按图
  * 手工标记「显示时应旋转的角度」,站点渲染时转正。
@@ -512,7 +512,7 @@ export const CONFIG_WRITE_WHITELIST = [
 ];
 
 const CONFIG_HEADER = `/* ============================================================
- * Lumina — 全局配置(纯字面量数据)
+ * V-Showcase — 全局配置(纯字面量数据)
  * ------------------------------------------------------------
  * ★ 本文件同时被两方读取:
  *   1. Vite(src/site/composables.ts 等) — 直接 import

@@ -42,7 +42,7 @@ const UPSTREAM_PER_PAGE = 40;        // 图床单页硬上限，写死不透传
 const MAX_CONCURRENT = 6;            // Workers 单次调用最多 6 条并发外连
 const FETCH_TIMEOUT_MS = 8000;       // 单次上游请求超时
 const CACHE_TTL_SECONDS = 300;       // 边缘缓存 5 分钟
-const CACHE_KEY = 'https://lumina.internal/api/images';
+const CACHE_KEY = 'https://vshowcase.internal/api/images';
 const CALLER_MAX = 500;              // ?per_page 上限
 const LAST_PAGE_WARN_THRESHOLD = 15;
 
@@ -65,7 +65,7 @@ export async function onRequest(context) {
     });
   }
   if (!env.QUBU_TOKEN && env.TOKEN) {
-    console.warn('[Lumina images] 环境变量 TOKEN 过于通用,已被当作图床密钥使用。请改名为 QUBU_TOKEN。');
+    console.warn('[V-Showcase images] 环境变量 TOKEN 过于通用,已被当作图床密钥使用。请改名为 QUBU_TOKEN。');
   }
 
   const perPage = clampInt(new URL(request.url).searchParams.get('per_page'), 1, CALLER_MAX, CALLER_MAX);
@@ -96,7 +96,7 @@ export async function onRequest(context) {
     const lastPage = Math.max(1, Number(innerData.last_page) || 1);
 
     if (lastPage > LAST_PAGE_WARN_THRESHOLD) {
-      console.warn(`[Lumina images] 图床分页较多: last_page=${lastPage}, total=${total}`);
+      console.warn(`[V-Showcase images] 图床分页较多: last_page=${lastPage}, total=${total}`);
     }
 
     // 只需凑够 perPage 张：页数由 perPage 与 40 共同决定，不由调用方任意放大
@@ -119,7 +119,7 @@ export async function onRequest(context) {
           // 部分页失败不能静默吞掉：否则 total 与实际返回一致地撒谎，
           // 前端和运维都发现不了图片少了。
           failedPages.push(numbers[i]);
-          console.warn(`[Lumina images] 第 ${numbers[i]} 页拉取失败,该页图片缺失`);
+          console.warn(`[V-Showcase images] 第 ${numbers[i]} 页拉取失败,该页图片缺失`);
         }
       }
     }

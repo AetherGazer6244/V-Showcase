@@ -1,4 +1,4 @@
-# Lumina-Web · 流动图片墙
+# V-Showcase · 流动图片墙
 
 Vue 3 + Vite + TypeScript 静态站点：多行叠层流动图片墙 + 图集浏览页 + 本地 Manager 编辑器
 图床 token 存在 Cloudflare 环境变量，仓库与前端代码零暴露
@@ -39,18 +39,18 @@ npm run dev
 
 推 main 自动部署。备选：CLI `npx wrangler pages deploy dist`，或仓库自带的 GitHub Actions（配 `CLOUDFLARE_API_TOKEN` 即可）。
 
-验证：`curl -I https://illusium.pages.dev/assets/main-*.js` 应 200 且为 JS MIME。
+验证：`curl -I https://vshowcase.pages.dev/assets/main-*.js` 应 200 且为 JS MIME。
 
 ### D1（访客统计 + 图片点赞）
 
 未配置时页面静默降级（不显示统计/点赞，不报错）：
 
 ```bash
-npx wrangler d1 create lumina-db   # 把输出的 id 填入 wrangler.toml
+npx wrangler d1 create v-showcase-db   # 把输出的 id 填入 wrangler.toml
 npm run db:schema:remote           # 建表（本地开发用 db:schema:local）
 ```
 
-查明细：`npx wrangler d1 execute lumina-db --remote --command "SELECT * FROM daily_stats"`
+查明细：`npx wrangler d1 execute v-showcase-db --remote --command "SELECT * FROM daily_stats"`
 
 ## 注意事项
 
@@ -65,7 +65,7 @@ npm run db:schema:remote           # 建表（本地开发用 db:schema:local）
 - macOS / Linux：`./tools/site.sh`
 - 监听 `127.0.0.1:8001`，走真实图床数据（等价于「开始」里的方式一）
 - 每次启动都会重新 build，所以看到的一定是最新代码；改完 `src/` 再跑一次即可
-- 服务跑在独立的 `Lumina Site` 黑窗口里：关掉那个窗口、或在里面按 Ctrl+C 即停止
+- 服务跑在独立的 `V-Showcase Site` 黑窗口里：关掉那个窗口、或在里面按 Ctrl+C 即停止
 - 缺 `.dev.vars` / `QUBU_TOKEN` 时启动器会直接报错停下（否则只会看到 16 张兜底占位图）
 - 已在运行时重复双击不会起第二份服务，只会重新打开浏览器
 - 没装过 wrangler 时首次要联网下载（1-3 分钟）；提示登录就先跑 `npx wrangler login`
@@ -119,9 +119,9 @@ schema.sql      D1 表结构（daily_stats / visitors / likes）
 
 - 许可说明 MIT
 
-- 项目链接 https://illusium.pages.dev/
+- 项目链接 https://vshowcase.pages.dev/
 
-- 仓库地址：https://github.com/Cecilian-Elysian/Lumina
+- 仓库地址：https://github.com/Cecilian-Elysian/V-Showcase
 
 - AI 焦点分析：[@vladmandic/face-api](https://github.com/vladmandic/face-api)
 - 本地图集管理: Manager 拖拽（`npm run build:manager` 本机构建，产物不入库）

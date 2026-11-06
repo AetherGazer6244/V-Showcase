@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Lumina 站点本地预览 — 一键：装依赖 → build → wrangler pages dev → 开浏览器
+# V-Showcase 站点本地预览 — 一键：装依赖 → build → wrangler pages dev → 开浏览器
 #
 # 与 tools/site.bat 同名同职责（Windows 版本），走和线上一致的数据链路：
 #   wrangler pages dev 会同时提供 dist/ 静态资源与 functions/ 的 /api/images，
@@ -13,7 +13,7 @@ PORT=8001
 URL="http://127.0.0.1:${PORT}/"
 
 echo "============================================================"
-echo "  Lumina 站点 — 本地预览（真实图片）"
+echo "  V-Showcase 站点 — 本地预览（真实图片）"
 echo "============================================================"
 
 if ! command -v node >/dev/null 2>&1; then

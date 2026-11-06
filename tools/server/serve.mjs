@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* ============================================================
- * Lumina 编辑器 — 启动器 + HTTP 服务器
+ * V-Showcase 编辑器 — 启动器 + HTTP 服务器
  * ------------------------------------------------------------
  * 双击 tools/start.bat 即调用本文件,职责:
  *   1. 检查 Node.js 版本(≥18)
@@ -70,7 +70,7 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TOOLS = path.resolve(__dirname, '..');         // tools/
 const VIEWER = getViewerDir();
-const PROJECT_ROOT = path.resolve(TOOLS, '..');     // Lumina/
+const PROJECT_ROOT = path.resolve(TOOLS, '..');     // V-Showcase/
 const MANAGER = path.resolve(PROJECT_ROOT, 'dist-manager'); // npm run build:manager 产物
 
 // ── CLI 参数 ─────────────────────────────────────
@@ -893,7 +893,7 @@ const server = http.createServer(async (req, res) => {
   if (!isLocalRequest(req)) {
     log('🚫', `已拒绝非本机请求: Host=${req.headers.host || '(空)'} Origin=${req.headers.origin || '(无)'} ${req.url}`);
     res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
-    res.end('Forbidden: Lumina editor only accepts local requests.');
+    res.end('Forbidden: V-Showcase editor only accepts local requests.');
     return;
   }
   const url = new URL(req.url, `http://127.0.0.1:${PREFERRED_PORT}`);
@@ -907,7 +907,7 @@ const server = http.createServer(async (req, res) => {
 
 // ── 启动入口 ─────────────────────────────────────
 async function bootstrap() {
-  log('✨', 'Lumina 编辑器启动中...');
+  log('✨', 'V-Showcase 编辑器启动中...');
   checkNode();
   await ensureManager();
   await ensureDeps();
@@ -919,7 +919,7 @@ async function bootstrap() {
 
   // 服务器端口(用实际分配到的)
   const actualServer = server.listen(port, '127.0.0.1', () => {
-    log('✨', `Lumina 编辑器已启动`);
+    log('✨', `V-Showcase 编辑器已启动`);
     log('🌐', `编辑器: ${url}`);
     log('📂', `tools/    = ${TOOLS}`);
     log('📂', `dist-manager/ = ${MANAGER}`);

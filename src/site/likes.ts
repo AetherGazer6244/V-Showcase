@@ -3,7 +3,7 @@
  * ------------------------------------------------------------
  * 数据:
  *   - 服务端计数:GET /api/likes 一次性拉全量 { [url]: count }
- *   - 访客已赞集合:localStorage lumina.liked(string[],键 = Image.url,
+ *   - 访客已赞集合:localStorage vshowcase.liked(string[],键 = Image.url,
  *     与焦点/图集/标签查表约定一致)
  *   - 未绑定 D1 / 请求失败 → 静默降级,UI 不渲染不报错
  *
@@ -17,7 +17,7 @@
 import { ref } from 'vue';
 import { useErrorBanner } from './composables';
 
-const LS_LIKED_KEY = 'lumina.liked';
+const LS_LIKED_KEY = 'vshowcase.liked';
 
 /* ---- 模块级单例状态 ---- */
 const state = {
@@ -65,7 +65,7 @@ export async function initLikes(): Promise<void> {
       state.ready.value = true;
     }
   } catch {
-    console.warn('[Lumina] 点赞计数拉取失败,点赞 UI 已隐藏');
+    console.warn('[V-Showcase] 点赞计数拉取失败,点赞 UI 已隐藏');
   }
 }
 
@@ -128,7 +128,7 @@ export function useLikes() {
         else delete likesCur[url];
         state.likes.value = likesCur;
 
-        console.warn('[Lumina] 点赞失败已回滚:', err);
+        console.warn('[V-Showcase] 点赞失败已回滚:', err);
         useErrorBanner().showBanner('点赞失败，请稍后再试');
       })
       .finally(() => pending.delete(url));

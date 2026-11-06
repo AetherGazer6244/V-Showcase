@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* ============================================================
- * Lumina 图库体检(audit)— 直连图床全字段核查
+ * V-Showcase 图库体检(audit)— 直连图床全字段核查
  * ------------------------------------------------------------
  * 与 Manager 的 /api/proxy-images 不同,本脚本直连图床 API
  * (网站清单保持精简,不做字段投影),拿到全量元数据后:
@@ -60,7 +60,7 @@ async function probeImage(url) {
     try {
       const { status, headers, chunks } = await httpGet(
         url,
-        { Range: 'bytes=0-15', 'User-Agent': 'LuminaAudit/1.0' },
+        { Range: 'bytes=0-15', 'User-Agent': 'V-ShowcaseAudit/1.0' },
         (chunks) => chunks.reduce((n, c) => n + c.length, 0) >= 16,
       );
       // 206(部分内容)/200(忽略 Range 的 CDN)都算活;416 = 范围越界但存在
@@ -106,7 +106,7 @@ function pMapProgress(items, mapper, concurrency) {
 
 /* ── 主流程 ───────────────────────────────── */
 async function main() {
-  log('🔍', 'Lumina 图库体检(直连图床,全字段)');
+  log('🔍', 'V-Showcase 图库体检(直连图床,全字段)');
 
   const cfg = await readViewerConfig();
   if (!cfg.apiBase || !cfg.listPath) throw new Error('未配置 apiBase/listPath');

@@ -1,7 +1,7 @@
 /* ============================================================
  * useAlbums — 图集聚合
  * ------------------------------------------------------------
- * 优先级: localStorage(lumina.album.local) > ALBUMS 静态数据。
+ * 优先级: localStorage(vshowcase.album.local) > ALBUMS 静态数据。
  * 仅保留本次实际拉到的 url(过滤图床已下架的旧记录);
  * 未分配的 url 归入末尾「未分组」。
  * ============================================================ */
@@ -9,7 +9,7 @@ import { computed } from 'vue';
 import type { Image, Album, AlbumMeta } from '@/shared/types';
 import { ALBUMS } from './albums';
 
-const LS_ALBUM_KEY = 'lumina.album.local';
+const LS_ALBUM_KEY = 'vshowcase.album.local';
 
 function readAlbumOverrides(): Record<string, string | null> {
   try {

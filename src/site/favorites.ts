@@ -1,7 +1,7 @@
 /* ============================================================
  * 收藏夹 — 模块级单例(同 likes.ts / settings.ts 模式)
  * ------------------------------------------------------------
- * 纯本地能力:localStorage lumina.favs(string[],键 = Image.url,
+ * 纯本地能力:localStorage vshowcase.favs(string[],键 = Image.url,
  * 与焦点/图集/标签/点赞查表约定一致)。
  *
  * - 列表有序:新收藏插到头部(展示 = 最近收藏在前)
@@ -12,7 +12,7 @@
  * ============================================================ */
 import { ref, computed } from 'vue';
 
-const LS_FAVS_KEY = 'lumina.favs';
+const LS_FAVS_KEY = 'vshowcase.favs';
 
 function readFavs(): string[] {
   try {

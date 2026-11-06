@@ -1,13 +1,13 @@
 /* ============================================================
  * useTags — 图片标签
  * ------------------------------------------------------------
- * 优先级: localStorage(lumina.tags.local) > TAGS 静态数据。
+ * 优先级: localStorage(vshowcase.tags.local) > TAGS 静态数据。
  * LS 值为 string[](覆盖静态)或 null(显式清空该图全部标签)。
  * ★ 键约定与焦点/图集一致:Image.url(原图直链),不是 thumb。
  * ============================================================ */
 import { TAGS } from './tags';
 
-const LS_TAGS_KEY = 'lumina.tags.local';
+const LS_TAGS_KEY = 'vshowcase.tags.local';
 
 /** readTagOverrides 的单条缓存:键是 LS 原始字符串。
  *  tagsOf 在渲染路径上被高频调用(图集页搜索每敲一个字,

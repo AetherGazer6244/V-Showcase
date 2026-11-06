@@ -8,7 +8,7 @@ import {
 import type { SiteSettings } from './settings';
 import { CONFIG } from './config';
 
-const LS_KEY = 'lumina.settings';
+const LS_KEY = 'vshowcase.settings';
 
 beforeEach(() => {
   localStorage.clear();

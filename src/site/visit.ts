@@ -51,7 +51,7 @@ export function useVisit() {
         state.totals.value = sanitize(json.data);
       }
     } catch {
-      console.warn('[Lumina] 访客统计不可用(本地开发或未绑定 D1)');
+      console.warn('[V-Showcase] 访客统计不可用(本地开发或未绑定 D1)');
     }
   }
 

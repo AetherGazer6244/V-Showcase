@@ -5,7 +5,7 @@ function freshModule() {
   return import('./favorites') as Promise<typeof import('./favorites')>;
 }
 
-const LS_KEY = 'lumina.favs';
+const LS_KEY = 'vshowcase.favs';
 
 describe('useFavorites — 收藏单例', () => {
   beforeEach(() => {

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Lumina 编辑器 — Unix/macOS 一键启动
+# V-Showcase 编辑器 — Unix/macOS 一键启动
 set -e
 cd "$(dirname "$0")"
 
 echo "============================================================"
-echo "  Lumina 编辑器"
+echo "  V-Showcase 编辑器"
 echo "============================================================"
 
 if ! command -v node >/dev/null 2>&1; then

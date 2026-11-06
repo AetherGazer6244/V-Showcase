@@ -1,6 +1,6 @@
 @echo off
 REM ============================================================
-REM  Lumina one-shot launcher: start server + wait + open browser
+REM  V-Showcase one-shot launcher: start server + wait + open browser
 REM ------------------------------------------------------------
 REM  ASCII ONLY + CRLF required: see rules in start.bat header.
 REM ============================================================
@@ -17,7 +17,7 @@ set URL=http://127.0.0.1:%PORT%/manager/
 
 echo.
 echo ============================================================
-echo   Lumina one-shot launcher
+echo   V-Showcase one-shot launcher
 echo ============================================================
 echo.
 
@@ -46,7 +46,7 @@ if not exist "tools\node_modules" (
 powershell -NoProfile -Command "$c = Get-NetTCPConnection -LocalPort %PORT% -State Listen -ErrorAction SilentlyContinue; if ($c) { exit 0 } else { exit 1 }" >nul 2>&1
 if %errorlevel%==0 goto SERVER_RUNNING
 echo [2/4] Port %PORT% is free, starting server
-start "Lumina Server" /B cmd /c "node tools\server\serve.mjs --no-launch --no-install --port=%PORT%"
+start "V-Showcase Server" /B cmd /c "node tools\server\serve.mjs --no-launch --no-install --port=%PORT%"
 echo   - Waiting for the server - timeout 30s
 set WAIT_COUNT=0
 goto WAIT_LOOP

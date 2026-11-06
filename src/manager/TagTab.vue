@@ -12,12 +12,12 @@ defineProps<{ active: boolean }>();
 
 /* ============================================================
  * 标签 Tab — 给每张图打标签,写入 src/site/tags.ts
- *   - 编辑进 localStorage(lumina.tags.local),null = 清空该图
+ *   - 编辑进 localStorage(vshowcase.tags.local),null = 清空该图
  *   - 与静态 tags.ts 合并预览;保存走操作队列批量落盘
  *   - 键 = Image.url(原图直链),与焦点/图集一致
  * ============================================================ */
 
-const LS_TAGS_KEY = 'lumina.tags.local';
+const LS_TAGS_KEY = 'vshowcase.tags.local';
 
 const state = useManagerState();
 

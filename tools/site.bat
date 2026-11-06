@@ -1,6 +1,6 @@
 @echo off
 REM ============================================================
-REM  Lumina site launcher - one shot: build + wrangler + browser
+REM  V-Showcase site launcher - one shot: build + wrangler + browser
 REM ------------------------------------------------------------
 REM  Shows REAL images, same data path as production:
 REM    1. preflight: node / .dev.vars / node_modules
@@ -28,7 +28,7 @@ set URL=http://127.0.0.1:%PORT%/
 
 echo.
 echo ============================================================
-echo   Lumina site - local preview with real images
+echo   V-Showcase site - local preview with real images
 echo ============================================================
 echo.
 
@@ -89,7 +89,7 @@ REM ---------- [3/4] start wrangler ----------
 echo [3/4] Port %PORT% is free, starting wrangler pages dev
 echo       - The server runs in its own window - keep it open.
 echo       - First run downloads wrangler, may take 1-3 minutes.
-start "Lumina Site" cmd /c "npx wrangler pages dev dist --port %PORT%"
+start "V-Showcase Site" cmd /c "npx wrangler pages dev dist --port %PORT%"
 echo       - Waiting for the server - timeout 180s
 powershell -NoProfile -Command "$d=180; while($d -gt 0){ if(Get-NetTCPConnection -LocalPort %PORT% -State Listen -ErrorAction SilentlyContinue){exit 0}; Start-Sleep -Seconds 1; $d-- }; exit 1" >nul 2>&1
 if !errorlevel! neq 0 goto SERVER_TIMEOUT
@@ -103,7 +103,7 @@ goto OPEN_BROWSER
 
 :SERVER_TIMEOUT
 echo [X] Server did not start within 180s
-echo     - Look at the "Lumina Site" window for the real reason
+echo     - Look at the "V-Showcase Site" window for the real reason
 echo     - First run needs internet to download wrangler
 echo     - If wrangler asks you to log in, run: npx wrangler login
 echo.
@@ -144,7 +144,7 @@ echo ============================================================
 echo   URL: !URL!
 echo   Notes:
 echo   - Real images: /api/images must be 200 in the Network tab
-echo   - The server lives in the "Lumina Site" window
+echo   - The server lives in the "V-Showcase Site" window
 echo   - To stop it: close that window, or press Ctrl+C inside it
 echo   - Changes to src/ need a rebuild: run this file again
 echo ============================================================

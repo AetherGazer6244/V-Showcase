@@ -90,7 +90,7 @@ function visitRequest(method, { ip, ua } = {}) {
   const headers = {};
   if (ip) headers['CF-Connecting-IP'] = ip;
   headers['User-Agent'] = ua || 'Mozilla/5.0 (test browser)';
-  return new Request('https://lumina.test/api/visit', { method, headers });
+  return new Request('https://vshowcase.test/api/visit', { method, headers });
 }
 
 async function visitOnce(env, ip) {
@@ -179,7 +179,7 @@ describe('functions/api/visit', () => {
 const IMG = 'https://bu.dusays.com/a.jpg';
 
 function likeRequest(body, env, { headers } = {}) {
-  const request = new Request('https://lumina.test/api/likes', {
+  const request = new Request('https://vshowcase.test/api/likes', {
     method: 'POST',
     headers: Object.assign({ 'Content-Type': 'application/json' }, headers || {}),
     body: JSON.stringify(body),
@@ -205,7 +205,7 @@ describe('functions/api/likes', () => {
     await likeRequest({ url: 'https://bu.dusays.com/2.jpg', delta: 1 }, env);
     await likeRequest({ url: 'https://bu.dusays.com/2.jpg', delta: 1 }, env);
 
-    const res = await likesHandler({ request: new Request('https://lumina.test/api/likes'), env });
+    const res = await likesHandler({ request: new Request('https://vshowcase.test/api/likes'), env });
     const json = await res.json();
     expect(json.status).toBe(true);
     expect(json.data.likes).toEqual({ 'https://bu.dusays.com/1.jpg': 1, 'https://bu.dusays.com/2.jpg': 2 });
@@ -224,7 +224,7 @@ describe('functions/api/likes', () => {
     const bad = await likeRequest({ url: 'https://evil.example.com/a.jpg', delta: 1 }, env);
     expect(bad.status).toBe(false);
     // 没写进库
-    const res = await likesHandler({ request: new Request('https://lumina.test/api/likes'), env });
+    const res = await likesHandler({ request: new Request('https://vshowcase.test/api/likes'), env });
     expect((await res.json()).data.likes).toEqual({});
   });
 

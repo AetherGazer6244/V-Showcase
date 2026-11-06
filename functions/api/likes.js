@@ -8,7 +8,7 @@
  *   POST   { url, delta } 增减计数(delta 仅接受 1 / -1)
  *          → { status: true, data: { url, count } } 返回权威计数
  *
-/* 去重策略:访客本地(localStorage lumina.liked)去重,服务端只做
+/* 去重策略:访客本地(localStorage vshowcase.liked)去重,服务端只做
  * 原子计数;取消点赞 delta=-1 且 MAX(0,…) 兜底不为负。
  *
  * 输入校验三层:必须 application/json(阻断跨站 <form> 简单请求伪造)、

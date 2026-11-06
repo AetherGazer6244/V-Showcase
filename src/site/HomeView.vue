@@ -6,6 +6,7 @@ import type { Image } from '@/shared/types';
 import { useSettings } from './settings';
 import { useFocal, useOrientation, useLightbox, lightboxIsOpen } from './composables';
 import { isScreensaverActive } from './screensaver';
+import { createImgFallback } from './imgFallback';
 import { windowSize, nextWindow, prefersReducedMotion, STEP_RATIO } from './wallRotate';
 import {
   normalizeOffset, flingVelocity, flingStep, isTap,
@@ -57,6 +58,11 @@ const { focalStyle } = useFocal();
 const { orientClass } = useOrientation();
 const lb = useLightbox();
 const { settings } = useSettings();
+
+/** 坏图自愈:缩略图失败后分级重试 → 回退原图直链(imgFallback.ts)。
+ *  srcOverrides 键 = img.url,与 loadedUrls 对齐 */
+const imgFallback = createImgFallback();
+const srcOverrides = imgFallback.overrides;
 
 /** 全量池(顺序固定;整圈走完时重洗一次) */
 const gallery = ref<Image[]>([]);
@@ -263,7 +269,7 @@ function forceReady() {
 function applyReady() {
   if (allLoaded.value) return;
   if (loadedUrls.value.size < total.value) {
-    console.warn('[Lumina] 加载超时/部分失败,强制启动滚动');
+    console.warn('[V-Showcase] 加载超时/部分失败,强制启动滚动');
   }
   allLoaded.value = true;
   if (safetyTimer) { clearTimeout(safetyTimer); safetyTimer = null; }
@@ -297,12 +303,15 @@ function flushLoaded() {
 }
 
 function onImgDone(img: Image) {
+  imgFallback.onLoad(img.url); // 若成功,停掉在途的自愈重试
   markLoaded(img.url);
 }
 
-/** 缩略图加载失败:计数上仍算「已就绪」,否则墙面会永远卡在加载态 */
+/** 缩略图加载失败:计数上仍算「已就绪」,否则墙面会永远卡在加载态;
+ *  同时在后台走自愈链(延时重试 → 回退原图直链),成功后 @load 自然补上内容 */
 function onImgError(img: Image) {
   onImgDone(img);
+  imgFallback.onError(img.url, img.thumb, img.url);
 }
 
 /** allLoaded 后每行内容双份 → CSS translateX(-50%) 无缝循环 */
@@ -661,6 +670,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   disposed = true;
+  imgFallback.dispose();
   window.removeEventListener('resize', onResize);
   document.removeEventListener('visibilitychange', onVisibilityChange);
   unwatchMotionPref();
@@ -709,7 +719,7 @@ onUnmounted(() => {
           >
             <div class="img-box" :class="orientClass(item.img.url)">
               <img
-                :src="item.img.thumb"
+                :src="srcOverrides.get(item.img.url) ?? item.img.thumb"
                 :alt="item.img.name || '图片'"
                 :style="focalStyle(item.img.url)"
                 :class="{ 'is-loaded': loadedUrls.has(item.img.url) }"

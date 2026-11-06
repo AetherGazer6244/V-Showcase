@@ -44,7 +44,7 @@
 - **位置**：`src/site/screensaver.ts`
 
 ### P1-7 图集覆盖数据对 localStorage 不设防
-- **问题**：`lumina.album.local` 里的内容直接 `JSON.parse` 后当对象用。存了 `"null"` / 数组 / 坏数据时 `Object.entries` 抛 TypeError，图集页整个白屏。
+- **问题**：`vshowcase.album.local` 里的内容直接 `JSON.parse` 后当对象用。存了 `"null"` / 数组 / 坏数据时 `Object.entries` 抛 TypeError，图集页整个白屏。
 - **修复**：只接受纯对象，键值只留 null 与字符串，其余整体作废回退空表。
 - **位置**：`src/site/useAlbums.ts`
 

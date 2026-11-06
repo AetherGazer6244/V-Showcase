@@ -5,6 +5,7 @@ import type { Image } from '@/shared/types';
 import { useAlbums, useTags, useFocal, useOrientation, useLightbox } from './composables';
 import { useLikes } from './likes';
 import { useFavorites } from './favorites';
+import { createImgFallback } from './imgFallback';
 import { formatInt } from '@/shared/utils';
 
 /* ============================================================
@@ -22,6 +23,11 @@ const mode = ref<'albums' | 'all'>('albums');
 const loading = ref(true);
 /** 封面已加载完成的图集(淡入用,键 = cover/thumb url) */
 const loadedCovers = ref(new Set<string>());
+
+/** 坏图自愈:加载失败后分级重试(imgFallback.ts)。
+ *  键统一用 img.url(封面本身就是原图直链,键与值相同) */
+const imgFallback = createImgFallback();
+const srcOverrides = imgFallback.overrides;
 
 const albums = useAlbums(() => images.value);
 const { tagsOf, albumTags } = useTags();
@@ -129,6 +135,20 @@ function onCoverLoad(cover: string) {
   if (coverFlushRaf == null) coverFlushRaf = requestAnimationFrame(flushCovers);
 }
 
+/** 封面(原图直链)失败:照旧计入就绪,后台走自愈链(三级换查询串重试) */
+function onCoverError(cover: string) {
+  onCoverLoad(cover);
+  imgFallback.onLoad(cover);
+  imgFallback.onError(cover, cover, cover);
+}
+
+/** 瀑布流缩略图失败:照旧计入就绪,后台走自愈链 → 最终回退原图直链 */
+function onMasonryError(img: Image) {
+  onCoverLoad(img.thumb);
+  imgFallback.onLoad(img.url);
+  imgFallback.onError(img.url, img.thumb, img.url);
+}
+
 function flushCovers() {
   coverFlushRaf = null;
   if (pendingCovers.size === 0) return;
@@ -139,6 +159,7 @@ function flushCovers() {
 }
 
 onUnmounted(() => {
+  imgFallback.dispose();
   if (coverFlushRaf != null) { cancelAnimationFrame(coverFlushRaf); coverFlushRaf = null; }
   pendingCovers.clear();
 });
@@ -210,14 +231,14 @@ onMounted(async () => {
       >
         <div class="img-box cover-box" :class="orientClass(album.cover)">
           <img
-            :src="album.cover"
+            :src="srcOverrides.get(album.cover) ?? album.cover"
             :alt="album.name"
             :style="focalStyle(album.cover)"
             :class="{ 'is-loaded': loadedCovers.has(album.cover) }"
             loading="lazy"
             decoding="async"
             @load="onCoverLoad(album.cover)"
-            @error="onCoverLoad(album.cover)"
+            @error="onCoverError(album.cover)"
           >
         </div>
         <div class="gallery-card-meta">
@@ -255,13 +276,13 @@ onMounted(async () => {
       >
         <div class="img-box" :class="masonryBoxClass(img)" :style="masonryBoxStyle(img)">
           <img
-            :src="img.thumb"
+            :src="srcOverrides.get(img.url) ?? img.thumb"
             :alt="img.name || '图片'"
             :class="{ 'is-loaded': loadedCovers.has(img.thumb) }"
             loading="lazy"
             decoding="async"
             @load="onCoverLoad(img.thumb)"
-            @error="onCoverLoad(img.thumb)"
+            @error="onMasonryError(img)"
           >
         </div>
         <button

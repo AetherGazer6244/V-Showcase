@@ -29,8 +29,8 @@ import { useScreensaver } from './screensaver';
 import { useFavorites } from './favorites';
 import { flushSettingsSave, resetSettings } from './settings';
 
-const SETTINGS_KEY = 'lumina.settings';
-const FAVS_KEY = 'lumina.favs';
+const SETTINGS_KEY = 'vshowcase.settings';
+const FAVS_KEY = 'vshowcase.favs';
 
 beforeEach(() => {
   localStorage.clear();

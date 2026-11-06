@@ -88,7 +88,7 @@ function install({ total = 0, perPage = 40, failPages = [], nonJsonStatus = null
   return { calls, cacheStore, cacheHits };
 }
 
-function req(url = 'https://lumina.test/api/images', method = 'GET') {
+function req(url = 'https://vshowcase.test/api/images', method = 'GET') {
   return new Request(url, { method });
 }
 
@@ -96,7 +96,7 @@ const ENV = { QUBU_TOKEN: 'test-token' };
 
 describe('functions/api/images — 方法与鉴权', () => {
   it('非 GET/HEAD → 405 且带 Allow', async () => {
-    const res = await imagesHandler({ request: req('https://lumina.test/api/images', 'POST'), env: ENV });
+    const res = await imagesHandler({ request: req('https://vshowcase.test/api/images', 'POST'), env: ENV });
     expect(res.status).toBe(405);
     expect(res.headers.get('Allow')).toContain('GET');
   });
@@ -124,7 +124,7 @@ describe('functions/api/images — 方法与鉴权', () => {
 describe('functions/api/images — 分页扇出', () => {
   it('per_page 不控制请求次数:per_page=1 也只请求 1 页', async () => {
     const { calls } = install({ total: 1000 });
-    await imagesHandler({ request: req('https://lumina.test/api/images?per_page=1'), env: ENV });
+    await imagesHandler({ request: req('https://vshowcase.test/api/images?per_page=1'), env: ENV });
     // 修复前:per_page=1 → last_page=1000 → 发出 1000 次请求(还会撞 50 次子请求上限)
     expect(calls).toHaveLength(1);
     expect(calls[0].per_page).toBe(40);
@@ -139,7 +139,7 @@ describe('functions/api/images — 分页扇出', () => {
 
   it('多页 → 内部固定每页 40,响应按 per_page 截断,缓存仍存全量目录', async () => {
     const { calls, cacheHits } = install({ total: 1000 });
-    const res = await imagesHandler({ request: req('https://lumina.test/api/images?per_page=100'), env: ENV });
+    const res = await imagesHandler({ request: req('https://vshowcase.test/api/images?per_page=100'), env: ENV });
     expect(calls.map((c) => c.page)).toEqual([1, 2, 3]);
     expect(calls.every((c) => c.per_page === 40)).toBe(true);
     const body = await res.json();
@@ -152,12 +152,12 @@ describe('functions/api/images — 分页扇出', () => {
 
   it('冷缓存小 per_page:只回 1 张,但缓存存全量页(后续大 per_page 直接切片命中)', async () => {
     const { calls, cacheHits } = install({ total: 30 }); // 一页(40)装得下
-    const r1 = await imagesHandler({ request: req('https://lumina.test/api/images?per_page=1'), env: ENV });
+    const r1 = await imagesHandler({ request: req('https://vshowcase.test/api/images?per_page=1'), env: ENV });
     expect((await r1.json()).data.data).toHaveLength(1);
     expect(cacheHits.put).toBe(1); // 缓存的是 30 张全量页,不是 1 张
     const after = calls.length;
 
-    const r2 = await imagesHandler({ request: req('https://lumina.test/api/images?per_page=20'), env: ENV });
+    const r2 = await imagesHandler({ request: req('https://vshowcase.test/api/images?per_page=20'), env: ENV });
     const b2 = await r2.json();
     expect(b2.data.data).toHaveLength(20); // 缓存 30 张足够 → 切片即可
     expect(calls.length).toBe(after);      // 不回源
@@ -167,10 +167,10 @@ describe('functions/api/images — 分页扇出', () => {
   it('缓存目录不足且上游还有更多 → 视为未命中回源补齐(防小请求污染缓存)', async () => {
     const { calls } = install({ total: 1000 });
     // 先让 per_page=1 污染缓存(只会拉 1 页 = 40 张)
-    await imagesHandler({ request: req('https://lumina.test/api/images?per_page=1'), env: ENV });
+    await imagesHandler({ request: req('https://vshowcase.test/api/images?per_page=1'), env: ENV });
     const after = calls.length;
 
-    const r2 = await imagesHandler({ request: req('https://lumina.test/api/images?per_page=200'), env: ENV });
+    const r2 = await imagesHandler({ request: req('https://vshowcase.test/api/images?per_page=200'), env: ENV });
     const b2 = await r2.json();
     expect(b2.data.data).toHaveLength(200); // 40 张不够 → 回源补拉 5 页
     expect(calls.length).toBe(after + 5);
@@ -188,7 +188,7 @@ describe('functions/api/images — 分页扇出', () => {
       live--;
       return upstreamPage(page, 40, 400);
     });
-    await imagesHandler({ request: req('https://lumina.test/api/images?per_page=400'), env: ENV });
+    await imagesHandler({ request: req('https://vshowcase.test/api/images?per_page=400'), env: ENV });
     expect(peak).toBeLessThanOrEqual(6);
   });
 });
@@ -206,10 +206,10 @@ describe('functions/api/images — 缓存', () => {
 
   it('边缘缓存命中时按本次 per_page 截断', async () => {
     const { calls } = install({ total: 100 });
-    await imagesHandler({ request: req('https://lumina.test/api/images?per_page=100'), env: ENV });
+    await imagesHandler({ request: req('https://vshowcase.test/api/images?per_page=100'), env: ENV });
     const after = calls.length;
 
-    const res = await imagesHandler({ request: req('https://lumina.test/api/images?per_page=10'), env: ENV });
+    const res = await imagesHandler({ request: req('https://vshowcase.test/api/images?per_page=10'), env: ENV });
     const body = await res.json();
     expect(body.data.data).toHaveLength(10);
     expect(calls.length).toBe(after); // 截断不发新的上游请求
@@ -217,7 +217,7 @@ describe('functions/api/images — 缓存', () => {
 
   it('部分页失败 → 报 failed_pages 且【不】入缓存', async () => {
     const { calls, cacheStore, cacheHits } = install({ total: 200, failPages: [3] });
-    const res = await imagesHandler({ request: req('https://lumina.test/api/images?per_page=200'), env: ENV });
+    const res = await imagesHandler({ request: req('https://vshowcase.test/api/images?per_page=200'), env: ENV });
     const body = await res.json();
     expect(body.data.failed_pages).toEqual([3]);
     expect(body.data.data).toHaveLength(160); // 5 页中第 3 页失败 → 4 × 40

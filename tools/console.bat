@@ -1,6 +1,6 @@
 @echo off
 REM ============================================================
-REM  Lumina Manager - open console in browser with DevTools
+REM  V-Showcase Manager - open console in browser with DevTools
 REM ------------------------------------------------------------
 REM  Usage:
 REM    1. tools\console.bat  - needs server already running
@@ -21,7 +21,7 @@ set URL=http://127.0.0.1:%PORT%/manager/
 
 echo.
 echo ============================================================
-echo   Lumina Manager + DevTools launcher
+echo   V-Showcase Manager + DevTools launcher
 echo ============================================================
 echo.
 

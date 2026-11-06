@@ -1,5 +1,5 @@
 /* ============================================================
- * Lumina 站点样式 — 图片墙(主页流动墙)
+ * V-Showcase 站点样式 — 图片墙(主页流动墙)
  * 行 + 轨道 + 无缝滚动 + 卡片加载态淡入
  * ============================================================ */
 
@@ -70,7 +70,7 @@
 }
 
 .wall.ready .row-track {
-  animation: lumina-scroll 40s linear infinite;
+  animation: vshowcase-scroll 40s linear infinite;
 }
 
 /* 内容轮换:整墙按行错峰淡出,在不可见时替换内容,再淡入 */
@@ -83,7 +83,7 @@
 
 .row-track .card { margin-right: var(--row-gap); }
 
-@keyframes lumina-scroll {
+@keyframes vshowcase-scroll {
   from { transform: translateX(0); }
   to   { transform: translateX(-50%); }
 }

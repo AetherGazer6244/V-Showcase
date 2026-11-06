@@ -10,7 +10,7 @@ vi.mock('./tags', () => ({
   },
 }));
 
-const LS_KEY = 'lumina.tags.local';
+const LS_KEY = 'vshowcase.tags.local';
 
 beforeEach(() => {
   localStorage.clear();
