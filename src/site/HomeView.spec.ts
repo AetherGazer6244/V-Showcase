@@ -32,11 +32,11 @@ describe('HomeView 开屏最短时长(MIN_SPLASH_MS)', () => {
     settings.value = { ...defaultSettings(), autoRotate: false };
   });
 
-  it('瞬时加载完成 → 进度条仍停留满最短时长才就绪', async () => {
+  it('瞬时加载完成 → 开屏遮罩仍停留满最短时长才揭幕', async () => {
     const wrapper = mount(HomeView);
     await flushMicrotasks();
-    // 名单已到,进入「加载图片 X / Y」阶段;墙未就绪
-    expect(wrapper.find('.wall-progress').exists()).toBe(true);
+    // 名单已到,进入图片下载阶段;遮罩盖着墙,未就绪
+    expect(wrapper.find('.wall-splash').exists()).toBe(true);
     expect(wrapper.find('.wall.ready').exists()).toBe(false);
 
     // 全部 @load → forceReady;但距挂载远不足 800ms → 延迟就绪
@@ -46,7 +46,7 @@ describe('HomeView 开屏最短时长(MIN_SPLASH_MS)', () => {
 
     await sleep(900); // 越过 800ms 补足窗
     expect(wrapper.find('.wall.ready').exists()).toBe(true);
-    expect(wrapper.find('.wall-progress').exists()).toBe(false);
+    expect(wrapper.find('.wall-splash').exists()).toBe(false);
     wrapper.unmount();
   });
 
@@ -58,7 +58,7 @@ describe('HomeView 开屏最短时长(MIN_SPLASH_MS)', () => {
 
     const wrapper = mount(HomeView);
     await sleep(1050); // 名单 950ms 后才到
-    expect(wrapper.find('.wall-progress').exists()).toBe(true);
+    expect(wrapper.find('.wall-splash').exists()).toBe(true);
 
     // 触发加载时已超 800ms → 只等 rAF 提交即就绪,无 800ms 补足
     for (const img of wrapper.findAll('.card img')) await img.trigger('load');

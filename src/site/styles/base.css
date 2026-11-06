@@ -279,13 +279,37 @@ button.chip.active {
   box-shadow: var(--nav-shadow);
 }
 
+/* 品牌字标(v2.5):V 渐变方块 + Showcase 词标,替代旧斜体纯文字 */
 .navbar-title {
-  color: var(--text-main);
-  font-size: 1.4rem;
-  font-weight: 800;
-  font-style: oblique 12deg;
-  letter-spacing: 0.15em;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
   text-decoration: none;
+}
+.navbar-logo {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--brand-1), var(--brand-2));
+  color: #fff;
+  font-size: 1.02rem;
+  font-weight: 900;
+  line-height: 1;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.navbar-title:hover .navbar-logo {
+  transform: scale(1.08) rotate(-4deg);
+  box-shadow: var(--hover-glow);
+}
+.navbar-wordmark {
+  color: var(--text-main);
+  font-size: 1.22rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
 }
 
 .navbar-nav {
@@ -362,14 +386,14 @@ button.chip.active {
   pointer-events: auto;
 }
 
-/* 胶囊头:琥珀圆点 logo 钮(一键回主页) */
+/* 胶囊头:mini V 方块 logo 钮(v2.5 与顶栏字标首尾呼应,一键回主页) */
 .dock-home {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 26px;
   height: 26px;
-  border-radius: 50%;
+  border-radius: 8px;
   border: 0;
   padding: 0;
   cursor: pointer;
@@ -379,11 +403,11 @@ button.chip.active {
   text-decoration: none;
 }
 .dock-home::after {
-  content: "";
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.92);
+  content: "V";
+  color: #fff;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1;
 }
 .dock-home:hover {
   transform: scale(1.12);

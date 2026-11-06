@@ -701,36 +701,70 @@
 .project-links { display: flex; gap: var(--space-2); }
 .project-links .btn { padding: 5px 14px; font-size: var(--fs-xs); }
 
-/* ============ 关于页 ============ */
+/* ============ 关于页(v2.5 ProfileCard 化)============ */
+/* 身份卡:整卡 panel-card,头像 112px + 靛蓝渐变环 + 统计/社交 chips */
 .about-identity {
   display: flex;
   align-items: center;
   gap: var(--space-5);
+  padding: 26px 30px;
 }
 
 .about-avatar {
   position: relative;
-  width: 84px;
-  height: 84px;
+  width: 112px;
+  height: 112px;
   border-radius: 50%;
   overflow: hidden;
-  background: var(--img-bg);
-  border: 2px solid var(--glass-border-strong);
+  background: linear-gradient(135deg, var(--brand-deep), var(--brand-1) 48%, var(--brand-2));
   box-shadow: var(--card-shadow);
   flex: none;
 }
-.about-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.about-avatar img {
+  position: absolute;
+  inset: 3px;                  /* 留 3px 露出底层渐变 = 描边环 */
+  width: calc(100% - 6px);
+  height: calc(100% - 6px);
+  object-fit: cover;
+  border-radius: 50%;
+}
 .about-avatar-letter {
   position: absolute;
-  inset: 0;
+  inset: 3px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2.2rem;
+  font-size: 2.6rem;
   font-weight: 800;
   color: #fff;
   background: linear-gradient(135deg, var(--brand-1), var(--brand-2));
+  border-radius: 50%;
 }
+
+.about-stats,
+.about-socials {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.about-stats { margin-top: var(--space-4); }
+.about-socials { margin-top: var(--space-3); }
+
+/* 社交 chip:链接化,hover 靛蓝 */
+.about-social-chip {
+  text-decoration: none;
+  color: var(--text-sub);
+  font-weight: 600;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.about-social-chip:hover {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+/* 正文卡:panel-card 内衬 prose(与博客详情卡同语言) */
+.about-article { padding: 30px 34px; }
 
 .about-recent {
   margin-top: var(--space-6);
@@ -744,19 +778,15 @@
   margin-bottom: var(--space-3);
 }
 .about-recent-list { display: flex; flex-direction: column; gap: var(--space-2); }
+/* 小卡:panel-card 提供玻璃底与 hover,这里只管布局 */
 .about-recent-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  padding: 10px 14px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border);
-  background: var(--glass-plain);
+  padding: 12px 18px;
   text-decoration: none;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
-.about-recent-item:hover { border-color: var(--accent); box-shadow: var(--hover-shadow-sm); }
 .about-recent-title {
   color: var(--text-main);
   font-weight: 600;
@@ -768,6 +798,9 @@
 .about-recent-date { color: var(--text-sub); font-size: var(--fs-xs); flex: none; }
 
 @media (max-width: 700px) {
-  .about-identity { flex-direction: column; text-align: center; gap: var(--space-3); }
+  .about-identity { flex-direction: column; text-align: center; gap: var(--space-3); padding: 22px 18px; }
+  .about-stats,
+  .about-socials { justify-content: center; }
+  .about-article { padding: 22px 18px; }
   .about-recent-item { flex-direction: column; align-items: flex-start; gap: 2px; }
 }

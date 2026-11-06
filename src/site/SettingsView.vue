@@ -42,6 +42,11 @@ const previewStyle = computed(() => ({
   animationPlayState: settings.value.animate ? 'running' : 'paused',
 }));
 
+/** 滑杆已滑过部分的填充百分比(--pct,自绘 track 渐变用) */
+function pctOf(v: number, range: { min: number; max: number }): string {
+  return ((v - range.min) / (range.max - range.min)) * 100 + '%';
+}
+
 /* ---- 底部提示(恢复默认 / 清空收藏共用) ---- */
 const hintVisible = ref(false);
 const hintText = ref('已恢复默认设置');
@@ -121,24 +126,41 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <section class="settings-hero">
-    <h1 class="settings-title">设置</h1>
-    <p class="settings-subtitle">调整图片墙的观感 — 偏好仅保存在本浏览器</p>
+  <section class="page-header">
+    <h1 class="page-header-title">设置</h1>
+    <p class="page-header-sub">调整图片墙的观感 — 偏好仅保存在本浏览器</p>
   </section>
 
   <main class="settings-main">
     <section class="settings-group" aria-label="外观">
+      <header class="group-head">
+        <span class="group-icon" aria-hidden="true">🎨</span>
+        <div class="group-text">
+          <p class="group-name">外观</p>
+          <p class="group-sub">主题与全站动效</p>
+        </div>
+      </header>
+
       <div class="setting-row">
         <span class="setting-label" id="set-theme-label">主题</span>
-        <div class="view-switch" role="group" aria-labelledby="set-theme-label">
+        <!-- 三张迷你预览卡替代纯文字切换:缩略示意 = 底色 + 内容条 -->
+        <div class="theme-cards" role="radiogroup" aria-labelledby="set-theme-label">
           <button
             v-for="t in THEME_CHOICES"
             :key="t.value"
             type="button"
+            class="theme-card"
             :class="{ active: settings.theme === t.value }"
-            :aria-pressed="settings.theme === t.value"
+            role="radio"
+            :aria-checked="settings.theme === t.value ? 'true' : 'false'"
             @click="settings.theme = t.value"
-          >{{ t.label }}</button>
+          >
+            <span class="theme-thumb" :data-mode="t.value" aria-hidden="true">
+              <span class="theme-thumb-nav"></span>
+              <span class="theme-thumb-card"></span>
+            </span>
+            <span class="theme-name">{{ t.label }}</span>
+          </button>
         </div>
         <output class="setting-value">{{ themeLabel }}</output>
       </div>
@@ -159,6 +181,14 @@ onUnmounted(() => {
     </section>
 
     <section class="settings-group" aria-label="图片墙设置">
+      <header class="group-head">
+        <span class="group-icon" aria-hidden="true">🖼️</span>
+        <div class="group-text">
+          <p class="group-name">图片墙</p>
+          <p class="group-sub">行数、卡片宽度与滚动节奏</p>
+        </div>
+      </header>
+
       <div class="setting-row">
         <label class="setting-label" for="set-rows">行数</label>
         <input
@@ -168,6 +198,7 @@ onUnmounted(() => {
           :min="ROWS_RANGE.min"
           :max="ROWS_RANGE.max"
           step="1"
+          :style="{ '--pct': pctOf(settings.rows, ROWS_RANGE) }"
         >
         <output class="setting-value">{{ settings.rows }} 行</output>
       </div>
@@ -181,6 +212,7 @@ onUnmounted(() => {
           :min="WIDTH_RANGE.min"
           :max="WIDTH_RANGE.max"
           step="10"
+          :style="{ '--pct': pctOf(settings.cardWidth, WIDTH_RANGE) }"
         >
         <output class="setting-value">{{ settings.cardWidth }} px</output>
       </div>
@@ -194,6 +226,7 @@ onUnmounted(() => {
           :min="SPEED_RANGE.min"
           :max="SPEED_RANGE.max"
           step="0.25"
+          :style="{ '--pct': pctOf(settings.speed, SPEED_RANGE) }"
         >
         <output class="setting-value">{{ settings.speed }}×</output>
       </div>
@@ -245,6 +278,14 @@ onUnmounted(() => {
     </section>
 
     <section class="settings-group" aria-label="阅读偏好">
+      <header class="group-head">
+        <span class="group-icon" aria-hidden="true">📖</span>
+        <div class="group-text">
+          <p class="group-name">阅读偏好</p>
+          <p class="group-sub">博客 / 关于页正文的排版</p>
+        </div>
+      </header>
+
       <div class="setting-row">
         <span class="setting-label" id="set-read-fs-label">正文字号</span>
         <div class="view-switch" role="group" aria-labelledby="set-read-fs-label">
@@ -291,8 +332,12 @@ onUnmounted(() => {
     <!-- 我的收藏:图片分区即时可用;「文章 / 音乐」分区为预留实现——
          未来收藏功能落地后按数据自动显隐(见 favorites 模块) -->
     <section id="favs" class="settings-group favs-group" aria-label="我的收藏">
-      <div class="favs-head">
-        <span class="setting-label">我的收藏</span>
+      <header class="group-head">
+        <span class="group-icon" aria-hidden="true">⭐</span>
+        <div class="group-text">
+          <p class="group-name">我的收藏</p>
+          <p class="group-sub">已点亮的图片 · 仅本浏览器</p>
+        </div>
         <span v-if="favImages.length" class="favs-count">{{ favImages.length }} 张</span>
         <div v-if="favImages.length" class="favs-actions">
           <button type="button" class="favs-btn" @click="openFav(0)">查看全部</button>
@@ -300,7 +345,7 @@ onUnmounted(() => {
             {{ confirmClear ? '再点一次确认' : '清空' }}
           </button>
         </div>
-      </div>
+      </header>
 
       <div v-if="favImages.length" class="favs-strip" role="list">
         <button
@@ -327,6 +372,14 @@ onUnmounted(() => {
     </section>
 
     <section class="settings-group" aria-label="屏保模式">
+      <header class="group-head">
+        <span class="group-icon" aria-hidden="true">🌙</span>
+        <div class="group-text">
+          <p class="group-name">屏保模式</p>
+          <p class="group-sub">闲置时的全屏轮播</p>
+        </div>
+      </header>
+
       <div class="setting-row">
         <span class="setting-label" id="set-saver-enter-label">屏保模式</span>
         <button

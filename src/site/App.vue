@@ -83,7 +83,7 @@ onMounted(() => {
 
 <template>
   <header class="navbar">
-    <div><a class="navbar-title" href="index.html">V-Showcase</a></div>
+    <div><a class="navbar-title" href="index.html"><span class="navbar-logo" aria-hidden="true">V</span><span class="navbar-wordmark">Showcase</span></a></div>
     <nav class="navbar-nav" aria-label="主导航">
       <a
         v-for="item in navItems"

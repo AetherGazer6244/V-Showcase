@@ -15,9 +15,9 @@
   --glass:    rgba(255, 255, 255, 0.055);
   --glass-strong: rgba(255, 255, 255, 0.10);
   --blur: blur(18px) saturate(1.25);
-  --primary:  #ff4d6d;
-  --primary-2: #ff9f43;
-  --primary-deep: #c9184a;
+  --primary:  #6366f1;
+  --primary-2: #818cf8;
+  --primary-deep: #4f46e5;
   --grad: linear-gradient(135deg, var(--primary), var(--primary-2));
   --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.38);
   --card-radius: 18px;
@@ -37,8 +37,8 @@ html, body {
                sans-serif;
   color: var(--text);
   background:
-    radial-gradient(900px 500px at 85% -10%, rgba(255, 77, 109, 0.10), transparent 60%),
-    radial-gradient(700px 420px at -10% 100%, rgba(255, 159, 67, 0.07), transparent 60%),
+    radial-gradient(900px 500px at 85% -10%, rgba(99, 102, 241, 0.10), transparent 60%),
+    radial-gradient(700px 420px at -10% 100%, rgba(129, 140, 248, 0.07), transparent 60%),
     linear-gradient(180deg, var(--bg-start) 0%, var(--bg-end) 100%);
   background-attachment: fixed;
   min-height: 100vh;
@@ -97,9 +97,9 @@ html, body {
 .side-item:hover { background: var(--glass); color: var(--text); }
 .side-item-active,
 .side-item-active:hover {
-  background: linear-gradient(135deg, rgba(255, 77, 109, 0.20), rgba(255, 159, 67, 0.10));
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.20), rgba(129, 140, 248, 0.10));
   color: var(--text);
-  box-shadow: inset 0 0 0 1px rgba(255, 77, 109, 0.35);
+  box-shadow: inset 0 0 0 1px rgba(99, 102, 241, 0.35);
 }
 .side-item-icon { font-size: 1rem; width: 22px; text-align: center; }
 
@@ -169,7 +169,7 @@ html, body {
   background: var(--grad);
   border-color: transparent;
   color: #fff;
-  box-shadow: 0 4px 16px rgba(255, 77, 109, 0.32);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.32);
 }
 .btn-primary:hover { filter: brightness(1.08); background: var(--grad); }
 .btn-ghost {
@@ -219,7 +219,7 @@ html, body {
   height: 100%; width: 0%;
   background: var(--grad);
   border-radius: 999px;
-  box-shadow: 0 0 8px rgba(255, 77, 109, 0.5);
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.5);
   transition: width 0.2s ease;
 }
 .status-progress-label {
@@ -450,7 +450,7 @@ html, body {
   border: 2px solid var(--primary);
   border-radius: 50%;
   transform: translate(-50%, -50%);
-  box-shadow: 0 0 10px rgba(255, 77, 109, 0.6);
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.6);
 }
 .marker-cross-h, .marker-cross-v {
   position: absolute;
@@ -608,7 +608,7 @@ html, body {
 }
 .album-chips.is-drop-target {
   border-color: var(--primary);
-  background: rgba(255, 77, 109, 0.07);
+  background: rgba(99, 102, 241, 0.07);
 }
 
 .album-chip {
@@ -627,8 +627,8 @@ html, body {
   white-space: nowrap;
 }
 .album-chip:hover {
-  border-color: rgba(255, 77, 109, 0.5);
-  background: rgba(255, 77, 109, 0.10);
+  border-color: rgba(99, 102, 241, 0.5);
+  background: rgba(99, 102, 241, 0.10);
 }
 .album-chip-count {
   font-family: var(--mono);
@@ -861,7 +861,7 @@ html, body {
 }
 .upload-drop.is-over {
   border-color: var(--primary);
-  background: rgba(255, 77, 109, 0.08);
+  background: rgba(99, 102, 241, 0.08);
 }
 .upload-drop-main { font-size: 0.88rem; color: var(--text); }
 .upload-drop-sub { font-size: 0.72rem; color: var(--text-sub); }

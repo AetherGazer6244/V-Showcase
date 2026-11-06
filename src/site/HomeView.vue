@@ -50,6 +50,9 @@ const ROW_GAP = 16;
 const FADE_MS = 400;
 /** 换班时每行的错峰延迟(形成波浪) */
 const ROW_STAGGER_MS = 60;
+/** 换班前等待预热就绪的上限(毫秒):正常网速早已命中缓存 → 零等待;
+ *  极端慢网最多多等这么久,绝不卡死换班 */
+const PREHEAT_GRACE_MS = 800;
 /** 开屏进度条最短停留时长:网快/全缓存时避免进度条一闪而过(观感生硬)。
  *  从组件挂载起算,不足此时长的部分在就绪前补等。 */
 const MIN_SPLASH_MS = 800;
@@ -108,8 +111,9 @@ let cursor = 0;
 let rotateTimer: ReturnType<typeof setTimeout> | null = null;
 /** 组件已卸载标记(遮蔽在途异步换班) */
 let disposed = false;
-/** 已发起预加载的 thumb(去重,避免重复 new Image) */
-const preloading = new Set<string>();
+/** 已发起预加载的 thumb(键 = thumb url,值为该次预热的 Promise)
+ *  同一 url 只发一次 new Image,重复调用拿同一个 Promise。 */
+const preloadJobs = new Map<string, Promise<void>>();
 
 /** 一次「已排定」的轮换:排计时时就算好窗口与池顺序并预热,
  *  到点直接兑现 → 预热与实际换上的必然是同一批图,新卡不闪。 */
@@ -120,6 +124,8 @@ interface RotationPlan {
   nextCursor: number;
   /** 兑现时生效的池顺序(重洗时为新数组) */
   pool: Image[];
+  /** 本窗缩略图的预热 Promise(排定时收集,换班前据此等缓存就绪) */
+  promises: Promise<void>[];
 }
 let rotationPlan: RotationPlan | null = null;
 
@@ -151,9 +157,10 @@ function planNext(): RotationPlan | null {
       indices: Array.from({ length: size }, (_, i) => i),
       nextCursor: step % n,
       pool: shuffle(gallery.value.slice()),
+      promises: [],
     };
   }
-  return { indices: res.indices, nextCursor: res.nextCursor, pool: gallery.value };
+  return { indices: res.indices, nextCursor: res.nextCursor, pool: gallery.value, promises: [] };
 }
 
 /** 兑现排定:换池 / 前进游标 / 返回窗口条目,并作废该排定 */
@@ -164,27 +171,41 @@ function commitPlan(plan: RotationPlan): RowItem[] {
   return planItems(plan);
 }
 
-/** 预取(仅暖浏览器缓存,不改 loadedUrls 以免开屏前误判就绪) */
-const preloadImage = (url: string, markKey: string) => {
-  if (!url || preloading.has(url)) return;
-  preloading.add(url);
-  const im = new Image();
-  im.onload = im.onerror = () => {
-    preloading.delete(url);
-    // 墙已就绪后再预热成功 → 按 markKey(原图 url)登记,换班出新卡时不淡入闪白
-    if (allLoaded.value) markLoaded(markKey);
-  };
-  im.src = url;
-};
-
-/** 预热下一批要挂上墙的缩略图。只暖 thumb(模板只请求 thumb),
- *  登记键统一用 img.url,与模板 loadedUrls.has(img.url) 对齐。 */
-function preloadItems(items: RowItem[]): void {
-  for (const it of items) preloadImage(it.img.thumb, it.img.url);
+/** 预取(仅暖浏览器缓存,不改 loadedUrls 以免开屏前误判就绪)
+ *  返回 Promise:换班前用它确认「这一窗的缩略图已全部进缓存」,
+ *  onload / onerror 都 resolve(坏图不能把等待打碎)。 */
+function preloadImage(url: string, markKey: string): Promise<void> {
+  if (!url) return Promise.resolve();
+  const cached = preloadJobs.get(url);
+  if (cached) return cached;
+  const job = new Promise<void>((resolve) => {
+    const im = new Image();
+    im.onload = im.onerror = () => {
+      preloadJobs.delete(url);
+      // 墙已就绪后再预热成功 → 按 markKey(原图 url)登记,换班出新卡时不淡入闪白
+      if (allLoaded.value) markLoaded(markKey);
+      resolve();
+    };
+    im.src = url;
+  });
+  preloadJobs.set(url, job);
+  return job;
 }
 
-/** 错峰淡出 → 不可见时替换内容 → 淡入(轨道 DOM 保留,滚动相位连续) */
-async function swapTo(items: RowItem[]): Promise<void> {
+/** 预热下一批要挂上墙的缩略图。只暖 thumb(模板只请求 thumb),
+ *  登记键统一用 img.url,与模板 loadedUrls.has(img.url) 对齐。
+ *  返回每张的预热 Promise,供换班时聚合等待。 */
+function preloadItems(items: RowItem[]): Promise<void>[] {
+  return items.map((it) => preloadImage(it.img.thumb, it.img.url));
+}
+
+/** 错峰淡出 → 不可见时替换内容 → 淡入(轨道 DOM 保留,滚动相位连续)
+ *
+ *  plan 非空时,换 DOM 前先等「这一窗缩略图全部进缓存」:
+ *  否则慢网下新卡先上墙、图后到 → 用户看到一片空白相框。
+ *  正常网速预热早在 rotateSec 秒内完成,此处零等待;慢网最多等 PREHEAT_GRACE_MS。
+ *  resize 重排不带 plan(内容本就在缓存)→ 直接换。 */
+async function swapTo(items: RowItem[], plan: RotationPlan | null = null): Promise<void> {
   // swapping 兼作互斥标志:上一次换班还在淡出/写回时,定时轮换与
   // resize 重排绝不能并发进 —— 否则两个 windowItems 交错写回,
   // rows 与窗口内容错位,滚动位置映射到错误的图。
@@ -193,6 +214,13 @@ async function swapTo(items: RowItem[]): Promise<void> {
   const waitMs = FADE_MS + ROW_STAGGER_MS * Math.max(0, rows.value.length - 1) + 40;
   await new Promise<void>((r) => setTimeout(r, waitMs));
   if (disposed) return;
+  if (plan && plan.promises.length) {
+    await Promise.race([
+      Promise.all(plan.promises),
+      new Promise<void>((r) => setTimeout(r, PREHEAT_GRACE_MS)),
+    ]);
+    if (disposed) return;
+  }
   windowItems.value = items;
   rows.value = buildRows(items, settings.value.rows);
   resetTouchState();
@@ -237,7 +265,8 @@ function scheduleRotate(): void {
   if (rotateTimer) { clearTimeout(rotateTimer); rotateTimer = null; }
   if (!canScheduleRotate()) { rotationPlan = null; return; }
   rotationPlan = planNext();
-  if (rotationPlan) preloadItems(planItems(rotationPlan));
+  // 排定即预热:把这一窗的缩略图 Promise 收进 plan,到点换班时据此等缓存
+  if (rotationPlan) rotationPlan.promises = preloadItems(planItems(rotationPlan));
   rotateTimer = setTimeout(rotateNow, settings.value.rotateSec * 1000);
 }
 
@@ -248,7 +277,8 @@ async function rotateNow(): Promise<void> {
   // 优先兑现排定的那一窗(排定时已预热);排定缺失才现场推演
   const plan = rotationPlan ?? planNext();
   if (!plan) { scheduleRotate(); return; }
-  await swapTo(commitPlan(plan));
+  // 兑现时带上 plan → swapTo 换 DOM 前等这一窗的缓存就绪(消空白)
+  await swapTo(commitPlan(plan), plan);
   if (!disposed) scheduleRotate();
 }
 
@@ -690,14 +720,13 @@ onUnmounted(() => {
 
 <template>
   <main class="wall" :class="{ ready: allLoaded, swapping }" aria-label="流动图片墙">
-    <!-- 列表请求中:名单未到,不确定态进度条(无文字) -->
-    <div v-if="total === 0" class="wall-loading" role="status" aria-label="加载中" />
-    <!-- 图片下载中:灰色占位相框已就位,这里给出进度,避免只剩空墙 -->
-    <div
-      v-else-if="total > 0 && !allLoaded"
-      class="wall-progress"
-      role="status"
-    >加载图片 {{ loadedUrls.size }} / {{ total }}</div>
+    <!-- 开屏遮罩(v2.5):名单请求与图片下载全程藏在遮罩后,墙就绪即整幕淡出揭幕 -->
+    <transition name="wall-splash">
+      <div v-if="!allLoaded" class="wall-splash" role="status" aria-label="正在准备图片墙">
+        <span class="wall-splash-mark" aria-hidden="true">V</span>
+        <span class="wall-splash-spinner" aria-hidden="true"></span>
+      </div>
+    </transition>
 
     <div
       v-for="(row, r) in displayRows"

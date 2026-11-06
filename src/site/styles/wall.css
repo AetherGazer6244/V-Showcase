@@ -9,34 +9,52 @@
   padding-top: 25px;
 }
 
-/* 名单加载中:不确定态进度条(无文字;图片阶段的「X / Y」是 .wall-progress) */
-.wall-loading {
-  position: relative;
-  width: min(320px, 60vw);
-  height: 4px;
-  margin: 132px auto;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  overflow: hidden;
+/* 开屏遮罩(v2.5):名单请求 + 图片下载全程藏在遮罩后,墙就绪整幕淡出揭幕。
+ * 门控逻辑不变(allLoaded/MIN_SPLASH_MS/超时兜底),只是把「过程」藏到幕后 */
+.wall-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  background: linear-gradient(180deg, var(--bg-start), var(--bg-end));
 }
-.wall-loading::after {
-  content: '';
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 40%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, var(--brand-1), var(--brand-2));
-  animation: wall-loading-slide 1.2s ease-in-out infinite;
+.wall-splash-mark {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--brand-1), var(--brand-2));
+  color: #fff;
+  font-size: 2rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  box-shadow: var(--hover-glow);
+  animation: splash-float 2.4s ease-in-out infinite;
 }
-@keyframes wall-loading-slide {
-  from { transform: translateX(-100%); }
-  to   { transform: translateX(350%); }
+@keyframes splash-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
 }
-/* 浅色主题底槽改暗透明,否则几乎不可见 */
-:root[data-theme='light'] .wall-loading { background: rgba(15, 23, 42, 0.08); }
-@media (prefers-reduced-motion: reduce) {
-  .wall-loading::after { animation: none; opacity: 0.6; }
+.wall-splash-spinner {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 3px solid var(--chip-bg);
+  border-top-color: var(--brand-1);
+  animation: splash-spin 0.9s linear infinite;
 }
+@keyframes splash-spin {
+  to { transform: rotate(360deg); }
+}
+/* 揭幕:整幕淡出(转场被 data-motion='off' 全局压制时退化为直接消失,可接受) */
+.wall-splash-leave-active { transition: opacity 0.6s ease; }
+.wall-splash-leave-to { opacity: 0; }
 
 .row {
   overflow: hidden;
