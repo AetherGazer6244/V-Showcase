@@ -7,8 +7,9 @@ import { initScreensaver } from './screensaver';
 import { formatInt } from '@/shared/utils';
 import Lightbox from './Lightbox.vue';
 import ScreensaverOverlay from './ScreensaverOverlay.vue';
+import PlayerBar from './PlayerBar.vue';
 
-/** 入口 HTML 内联脚本注入的视图标识(home / gallery / settings / notfound) */
+/** 入口 HTML 内联脚本注入的视图标识(home/blog/post/gallery/music/projects/about/settings/notfound) */
 const view = window.__VIEW__ || 'home';
 
 /* chunk 加载失败(弱网 / 发版瞬间旧 chunk 已被删)的可交互兜底:
@@ -22,7 +23,7 @@ const ViewLoadError = defineComponent({
   },
 });
 
-/* 视图按需加载:四个页面共用一个入口,静态 import 会让 404.html(只有两行字)
+/* 视图按需加载:各页面共用一个入口,静态 import 会让 404.html(只有两行字)
  * 也下载并执行全站代码。异步组件把它拆成独立 chunk,各页只下自己那份。 */
 function lazyView(loader: () => Promise<Component>) {
   return defineAsyncComponent({
@@ -38,7 +39,12 @@ function lazyView(loader: () => Promise<Component>) {
 
 const views = {
   home: lazyView(() => import('./HomeView.vue')),
+  blog: lazyView(() => import('./BlogView.vue')),
+  post: lazyView(() => import('./PostView.vue')),
   gallery: lazyView(() => import('./GalleryView.vue')),
+  music: lazyView(() => import('./MusicView.vue')),
+  projects: lazyView(() => import('./ProjectsView.vue')),
+  about: lazyView(() => import('./AboutView.vue')),
   settings: lazyView(() => import('./SettingsView.vue')),
   notfound: lazyView(() => import('./NotFoundView.vue')),
 } as const;
@@ -46,12 +52,18 @@ type ViewKey = keyof typeof views;
 
 const currentView = computed(() => views[(view as ViewKey) in views ? (view as ViewKey) : 'notfound']);
 
-/* 灯箱与屏保是全站常驻层(任意页面都能唤起),保持静态引入 */
+/* 灯箱与屏保是全站常驻层(任意页面都能唤起),保持静态引入。
+ * PlayerBar 同理:全局播放条常驻底部(无曲目时自隐藏)。 */
+/* ⚠ 教训(docs/lessons-learned 3.4):改 import 块时逐个确认模板组件
+ * 「import 还在」——生产构建缺 import 会静默渲染成未知元素,零警告。 */
 
-/* 收藏区块已在设置页内(id="favs"),不再单列导航项,避免两个入口指向同一页 */
+/* 导航:顶栏 6 项主导航;「关于」只在底部胶囊区(2026-11 改版决策) */
 const navItems = [
   { href: 'index.html', key: 'home', text: '主页' },
+  { href: 'blog.html', key: 'blog', text: '博客' },
   { href: 'gallery.html', key: 'gallery', text: '图集' },
+  { href: 'music.html', key: 'music', text: '音乐' },
+  { href: 'projects.html', key: 'projects', text: '项目' },
   { href: 'settings.html', key: 'settings', text: '设置' },
 ] as const;
 
@@ -70,7 +82,7 @@ onMounted(() => {
 
 <template>
   <header class="navbar">
-    <div><h1 class="navbar-title">V-Showcase</h1></div>
+    <div><a class="navbar-title" href="index.html">V-Showcase</a></div>
     <nav class="navbar-nav" aria-label="主导航">
       <a
         v-for="item in navItems"
@@ -91,7 +103,11 @@ onMounted(() => {
 
   <footer class="site-footer">
     <div class="footer-capsule">
-      <a class="footer-link" href="https://github.com/AetherGazer6244/V-Showcase" target="_blank" rel="noopener">GitHub</a>
+      <!-- 胶囊头 logo 钮:任意页面一键回主页 -->
+      <a class="dock-home" href="index.html" aria-label="回到主页" title="回到主页"></a>
+      <span class="footer-dot" aria-hidden="true">·</span>
+      <!-- 「关于」入口只在底部胶囊区(顶栏不含) -->
+      <a class="footer-link" :class="{ active: view === 'about' }" href="about.html">关于</a>
       <template v-if="visit.totals.value">
         <span class="footer-dot" aria-hidden="true">·</span>
         <span class="footer-stats">
@@ -101,9 +117,12 @@ onMounted(() => {
           </span>
         </span>
       </template>
+      <span class="footer-dot" aria-hidden="true">·</span>
+      <a class="footer-link" href="https://github.com/AetherGazer6244/V-Showcase" target="_blank" rel="noopener">GitHub</a>
     </div>
   </footer>
 
   <Lightbox />
   <ScreensaverOverlay />
+  <PlayerBar />
 </template>

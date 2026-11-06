@@ -4,7 +4,10 @@ import {
   useSettings, resetSettings,
   ROWS_RANGE, WIDTH_RANGE, SPEED_RANGE,
   IDLE_CHOICES, INTERVAL_CHOICES, ROTATE_CHOICES,
+  READING_FONT_CHOICES, READING_LINE_CHOICES, READING_WIDTH_CHOICES,
+  READING_FONT_LABEL, READING_LINE_LABEL, READING_WIDTH_LABEL,
 } from './settings';
+import type { ThemeName } from './settings';
 import { useFavorites } from './favorites';
 import { useScreensaver } from './screensaver';
 import { useFocal, useOrientation, useLightbox } from './composables';
@@ -20,6 +23,19 @@ const lb = useLightbox();
 
 /* 预览轨道:两份相同卡片序列 + translateX(-50%) 无缝循环 */
 const previewCards = [0, 1, 2, 0, 1, 2];
+
+/* 外观区:主题三态候选(明亮为默认) */
+const THEME_CHOICES: Array<{ value: ThemeName; label: string }> = [
+  { value: 'light', label: '明亮' },
+  { value: 'dark', label: '深色' },
+  { value: 'auto', label: '跟随系统' },
+];
+const themeLabel = computed(() => {
+  const t = settings.value.theme;
+  if (t === 'dark') return '深色';
+  if (t === 'light') return '明亮';
+  return '跟随系统';
+});
 
 const previewStyle = computed(() => ({
   animationDuration: (12 / settings.value.speed) + 's',
@@ -111,6 +127,37 @@ onUnmounted(() => {
   </section>
 
   <main class="settings-main">
+    <section class="settings-group" aria-label="外观">
+      <div class="setting-row">
+        <span class="setting-label" id="set-theme-label">主题</span>
+        <div class="view-switch" role="group" aria-labelledby="set-theme-label">
+          <button
+            v-for="t in THEME_CHOICES"
+            :key="t.value"
+            type="button"
+            :class="{ active: settings.theme === t.value }"
+            :aria-pressed="settings.theme === t.value"
+            @click="settings.theme = t.value"
+          >{{ t.label }}</button>
+        </div>
+        <output class="setting-value">{{ themeLabel }}</output>
+      </div>
+
+      <div class="setting-row">
+        <span class="setting-label" id="set-motion-label">动效总开关</span>
+        <button
+          type="button"
+          class="toggle"
+          :class="{ on: settings.motion }"
+          role="switch"
+          :aria-checked="settings.motion ? 'true' : 'false'"
+          aria-labelledby="set-motion-label"
+          @click="settings.motion = !settings.motion"
+        />
+        <output class="setting-value">{{ settings.motion ? '开' : '全站静止' }}</output>
+      </div>
+    </section>
+
     <section class="settings-group" aria-label="图片墙设置">
       <div class="setting-row">
         <label class="setting-label" for="set-rows">行数</label>
@@ -166,23 +213,6 @@ onUnmounted(() => {
       </div>
 
       <div class="setting-row">
-        <span class="setting-label" id="set-theme-label">主题</span>
-        <div class="view-switch" role="group" aria-labelledby="set-theme-label">
-          <button
-            type="button"
-            :class="{ active: settings.theme === 'dark' }"
-            @click="settings.theme = 'dark'"
-          >深色</button>
-          <button
-            type="button"
-            :class="{ active: settings.theme === 'light' }"
-            @click="settings.theme = 'light'"
-          >浅色</button>
-        </div>
-        <output class="setting-value">{{ settings.theme === 'light' ? '浅色' : '深色' }}</output>
-      </div>
-
-      <div class="setting-row">
         <span class="setting-label" id="set-rotate-label">内容轮换</span>
         <button
           type="button"
@@ -214,6 +244,52 @@ onUnmounted(() => {
       </div>
     </section>
 
+    <section class="settings-group" aria-label="阅读偏好">
+      <div class="setting-row">
+        <span class="setting-label" id="set-read-fs-label">正文字号</span>
+        <div class="view-switch" role="group" aria-labelledby="set-read-fs-label">
+          <button
+            v-for="v in READING_FONT_CHOICES"
+            :key="v"
+            type="button"
+            :class="{ active: settings.reading.fontSize === v }"
+            @click="settings.reading.fontSize = v"
+          >{{ READING_FONT_LABEL[v] }}</button>
+        </div>
+        <output class="setting-value">{{ READING_FONT_LABEL[settings.reading.fontSize] }}</output>
+      </div>
+
+      <div class="setting-row">
+        <span class="setting-label" id="set-read-lh-label">行距</span>
+        <div class="view-switch" role="group" aria-labelledby="set-read-lh-label">
+          <button
+            v-for="v in READING_LINE_CHOICES"
+            :key="v"
+            type="button"
+            :class="{ active: settings.reading.lineHeight === v }"
+            @click="settings.reading.lineHeight = v"
+          >{{ READING_LINE_LABEL[v] }}</button>
+        </div>
+        <output class="setting-value">{{ READING_LINE_LABEL[settings.reading.lineHeight] }}</output>
+      </div>
+
+      <div class="setting-row">
+        <span class="setting-label" id="set-read-w-label">阅读宽度</span>
+        <div class="view-switch" role="group" aria-labelledby="set-read-w-label">
+          <button
+            v-for="v in READING_WIDTH_CHOICES"
+            :key="v"
+            type="button"
+            :class="{ active: settings.reading.width === v }"
+            @click="settings.reading.width = v"
+          >{{ READING_WIDTH_LABEL[v] }}</button>
+        </div>
+        <output class="setting-value">{{ READING_WIDTH_LABEL[settings.reading.width] }}</output>
+      </div>
+    </section>
+
+    <!-- 我的收藏:图片分区即时可用;「文章 / 音乐」分区为预留实现——
+         未来收藏功能落地后按数据自动显隐(见 favorites 模块) -->
     <section id="favs" class="settings-group favs-group" aria-label="我的收藏">
       <div class="favs-head">
         <span class="setting-label">我的收藏</span>

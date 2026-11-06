@@ -78,7 +78,18 @@ describe('App.vue 常驻层装配', () => {
 
   it('导航与页脚正常渲染', async () => {
     const app = await mountApp();
-    expect(app.findAll('.navbar-link')).toHaveLength(3);
+    // 2026-11 博客化:顶栏 6 项(主页/博客/图集/音乐/项目/设置),「关于」只在页脚胶囊
+    expect(app.findAll('.navbar-link')).toHaveLength(6);
     expect(app.find('.site-footer').exists()).toBe(true);
+    // 页脚胶囊:logo 回主页钮 + 关于入口 + GitHub
+    expect(app.find('.dock-home').exists()).toBe(true);
+    expect(app.find('.dock-home').attributes('href')).toBe('index.html');
+    expect(app.findAll('.footer-link').some((a) => a.text() === '关于')).toBe(true);
+  });
+
+  it('全局播放条已挂载(占位渲染不报错)', async () => {
+    const app = await mountApp();
+    // PlayerBar 常驻层:无曲目时自隐藏,但组件本身必须能装配
+    expect(app.find('.player-bar').exists()).toBe(false);
   });
 });

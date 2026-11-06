@@ -22,10 +22,11 @@
     --row-gap: 10px;
     --row-margin: 6px;
   }
-  .navbar { padding: 13px 16px; }
-  .navbar-title { font-size: 1rem; }
-  .navbar-nav { gap: 16px; }
-  .navbar-link { font-size: 0.82rem; }
+  .navbar { padding: 10px 14px; height: 52px; }
+  .navbar-title { font-size: 0.95rem; letter-spacing: 0.1em; }
+  .navbar-nav { gap: 10px; overflow-x: auto; scrollbar-width: none; }
+  .navbar-nav::-webkit-scrollbar { display: none; }
+  .navbar-link { font-size: 0.78rem; letter-spacing: 0.02em; }
 
   .gallery-hero { padding: 40px 16px 24px; }
   .hero-title   { font-size: 2.2rem; }
@@ -56,6 +57,21 @@
 /* ============ 动画开关 ============ */
 html[data-anim='off'] .wall.ready .row-track { animation-play-state: paused; }
 
+/* ============ 动效总开关 ============
+ * settings.motion=off → html[data-motion='off']:
+ *  - 全局过渡缩短到近零(交互瞬时完成,不再有平滑动画)
+ *  - 装饰性 CSS 动画(预览轨道/Ken Burns/音浪等)由各文件内的
+ *    data-motion 规则暂停;墙面滚动走上面 data-anim 通道 */
+html[data-motion='off'] *,
+html[data-motion='off'] *::before,
+html[data-motion='off'] *::after {
+  transition-duration: 0.01ms !important;
+}
+html[data-motion='off'] .preview-track { animation-play-state: paused; }
+html[data-motion='off'] .ss-img.kenburns,
+html[data-motion='off'] .ss-img.orient-90.kenburns,
+html[data-motion='off'] .ss-img.orient-270.kenburns { animation-play-state: paused; }
+
 /* ============ 响应式补充 ============ */
 @media (max-width: 768px) {
   .settings-hero { padding: 40px 16px 24px; }
@@ -74,4 +90,14 @@ html[data-anim='off'] .wall.ready .row-track { animation-play-state: paused; }
 
   .favs-head { flex-wrap: wrap; }
   .favs-thumb { width: 104px; height: 70px; }
+
+  /* 页脚胶囊移动端压缩:字链与统计缩排,极窄屏隐藏统计(总数见主页页脚) */
+  .footer-capsule { gap: 9px; padding: 6px 14px; }
+  .page-header { padding: 40px 16px 24px; }
+  .page-header-main { padding: 0 16px 48px; }
+}
+
+@media (max-width: 430px) {
+  .footer-stats { display: none; }
+  .footer-capsule { gap: 8px; }
 }

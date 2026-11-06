@@ -6,18 +6,26 @@
  *   - load/save + 逐字段校验(clamp):非法字段回退默认,合法字段保留
  *   - initSettings(): main.ts 挂载前调用一次,把设置应用到 <html>
  *       --card-w   → .card flex-basis(styles/wall.css 已有 var 回退)
- *       data-anim  → 关动画时置 'off'(CSS 暂停 .row-track 动画)
+ *       data-anim  → 关动画(或动效总开关关闭)时置 'off'(CSS 暂停 .row-track)
+ *       data-motion→ 动效总开关总闸(overrides.css 全局缩短过渡)
+ *       data-theme → 'dark' | 'light'(auto 解析后写入,缺省 = light)
+ *       --post-*   → 博客/关于正文阅读偏好(字号/行距/阅读宽度)
  *
- * 注意:theme 字段驱动深/浅主题(styles/base.css 的 :root[data-theme] 变量组)。
- *       screensaver 子对象由 screensaver.ts / ScreensaverOverlay.vue 消费,
- *       纯组件驱动,不写 <html> 属性。
+ * 注意:
+ *   - theme 支持 'auto'(跟随系统);applySettings 解析为具体值写 dataset,
+ *     防闪烁内联脚本(各入口 HTML)用同一套解析逻辑,缺省明亮。
+ *   - screensaver 子对象由 screensaver.ts / ScreensaverOverlay.vue 消费。
  * ============================================================ */
 import { ref, watch, watchEffect } from 'vue';
 import { debounce } from '@/shared/utils';
 import { CONFIG } from './config';
 
-export type ThemeName = 'dark' | 'light';
+export type ThemeName = 'dark' | 'light' | 'auto';
+export type ResolvedTheme = 'dark' | 'light';
 export type ScreensaverOrder = 'random' | 'seq';
+export type ReadingFont = 'sm' | 'md' | 'lg';
+export type ReadingLine = 'tight' | 'normal' | 'loose';
+export type ReadingWidth = 'narrow' | 'medium' | 'wide';
 
 /** 屏保子设置(闲置自动进入 / 换图间隔 / 顺序 / Ken Burns 动效) */
 export interface ScreenSaverPrefs {
@@ -31,15 +39,42 @@ export interface ScreenSaverPrefs {
   kenBurns: boolean;
 }
 
-/** 各主题的 <meta name="theme-color"> 值(浏览器地址栏配色) */
-const THEME_COLOR: Record<ThemeName, string> = {
-  dark: '#14161a',
-  light: '#f6f7f9',
+/** 阅读偏好(博客 / 关于页正文排版,localStorage 持久化) */
+export interface ReadingPrefs {
+  /** 正文字号档位 */
+  fontSize: ReadingFont;
+  /** 行距档位 */
+  lineHeight: ReadingLine;
+  /** 阅读宽度档位 */
+  width: ReadingWidth;
+}
+
+/** 设置页分段按钮候选与展示文案 */
+export const READING_FONT_CHOICES = ['sm', 'md', 'lg'] as const;
+export const READING_LINE_CHOICES = ['tight', 'normal', 'loose'] as const;
+export const READING_WIDTH_CHOICES = ['narrow', 'medium', 'wide'] as const;
+export const READING_FONT_LABEL: Record<ReadingFont, string> = { sm: '小', md: '中', lg: '大' };
+export const READING_LINE_LABEL: Record<ReadingLine, string> = { tight: '紧凑', normal: '标准', loose: '宽松' };
+export const READING_WIDTH_LABEL: Record<ReadingWidth, string> = { narrow: '窄', medium: '中', wide: '宽' };
+
+/** 档位 → CSS 值(post.css / about 正文消费) */
+const READING_FS_PX: Record<ReadingFont, string> = { sm: '15px', md: '16.5px', lg: '18px' };
+const READING_LH: Record<ReadingLine, string> = { tight: '1.6', normal: '1.8', loose: '2.05' };
+const READING_MEASURE: Record<ReadingWidth, string> = { narrow: '42rem', medium: '52rem', wide: '64rem' };
+
+/** 各主题的 <meta name="theme-color"> 值(浏览器地址栏配色;auto 解析后取对应档) */
+const THEME_COLOR: Record<ResolvedTheme, string> = {
+  dark: '#16181d',
+  light: '#fdfdfd',
 };
 
 export interface SiteSettings {
-  /** 主题(dark 深色 / light 浅色) */
+  /** 主题(light 明亮默认 / dark 深色 / auto 跟随系统) */
   theme: ThemeName;
+  /** 动效总开关:关 = 墙面滚动/轮换/屏保自动进入/Ken Burns/过渡全部静止 */
+  motion: boolean;
+  /** 阅读偏好(博客/关于正文) */
+  reading: ReadingPrefs;
   /** 图片墙行数(1–6) */
   rows: number;
   /** 卡片宽度 px(180–560) */
@@ -86,10 +121,17 @@ export function defaultSaver(): ScreenSaverPrefs {
   return { idleMin: 0, intervalSec: 10, order: 'random', kenBurns: true };
 }
 
-/** 默认值:theme 深色,rows/cardWidth 取 CONFIG(纯字面量),speed/animate 出厂值 */
+/** 阅读偏好默认值 */
+export function defaultReading(): ReadingPrefs {
+  return { fontSize: 'md', lineHeight: 'normal', width: 'medium' };
+}
+
+/** 默认值:theme 明亮(简洁明亮定位),motion 总闸开,其余出厂值 */
 export function defaultSettings(): SiteSettings {
   return {
-    theme: 'dark',
+    theme: 'light',
+    motion: true,
+    reading: defaultReading(),
     rows: clamp(Math.round(toNum(CONFIG.rows, 3)), ROWS_RANGE.min, ROWS_RANGE.max),
     cardWidth: clamp(Math.round(toNum(CONFIG.cardWidth, 300)), WIDTH_RANGE.min, WIDTH_RANGE.max),
     speed: 1,
@@ -113,6 +155,28 @@ function loadSaver(raw: unknown): ScreenSaverPrefs {
   };
 }
 
+/** 读取并校验阅读偏好子对象;档位非法逐字段回默认 */
+function loadReading(raw: unknown): ReadingPrefs {
+  const def = defaultReading();
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return def;
+  const o = raw as Record<string, unknown>;
+  const pick = <T extends string>(v: unknown, choices: readonly T[], fallback: T): T =>
+    choices.includes(v as T) ? (v as T) : fallback;
+  return {
+    fontSize: pick(o.fontSize, READING_FONT_CHOICES, def.fontSize),
+    lineHeight: pick(o.lineHeight, READING_LINE_CHOICES, def.lineHeight),
+    width: pick(o.width, READING_WIDTH_CHOICES, def.width),
+  };
+}
+
+/** 解析 auto 主题 → 具体值;无 matchMedia 环境(测试/老浏览器)回明亮 */
+export function resolveTheme(t: ThemeName): ResolvedTheme {
+  if (t === 'dark') return 'dark';
+  if (t !== 'auto') return 'light';
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return 'light';
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
 /** 读取并校验 localStorage;逐字段 clamp,只丢弃非法字段 */
 export function loadSettings(): SiteSettings {
   const def = defaultSettings();
@@ -125,7 +189,9 @@ export function loadSettings(): SiteSettings {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return def;
   const o = raw as Record<string, unknown>;
   return {
-    theme: o.theme === 'light' ? 'light' : 'dark',
+    theme: o.theme === 'dark' || o.theme === 'light' || o.theme === 'auto' ? o.theme : def.theme,
+    motion: typeof o.motion === 'boolean' ? o.motion : def.motion,
+    reading: loadReading(o.reading),
     rows: clamp(Math.round(toNum(o.rows, def.rows)), ROWS_RANGE.min, ROWS_RANGE.max),
     cardWidth: clamp(Math.round(toNum(o.cardWidth, def.cardWidth)), WIDTH_RANGE.min, WIDTH_RANGE.max),
     speed: clamp(toNum(o.speed, def.speed), SPEED_RANGE.min, SPEED_RANGE.max),
@@ -181,17 +247,38 @@ export function resetSettings(): void {
 /** 把设置写到 <html>(幂等,可在测试中直接调用) */
 export function applySettings(s: SiteSettings): void {
   const el = document.documentElement;
+  const theme = resolveTheme(s.theme);
+  el.dataset.theme = theme;
   el.style.setProperty('--card-w', s.cardWidth + 'px');
-  el.dataset.theme = s.theme;
   document
     .querySelector('meta[name="theme-color"]')
-    ?.setAttribute('content', THEME_COLOR[s.theme]);
-  if (s.animate) delete el.dataset.anim;
+    ?.setAttribute('content', THEME_COLOR[theme]);
+
+  // 动效总开关:off 时墙动画(沿用 data-anim 通道)与全局过渡(data-motion)一并静止
+  if (s.motion) delete el.dataset.motion;
+  else el.dataset.motion = 'off';
+  if (s.animate && s.motion) delete el.dataset.anim;
   else el.dataset.anim = 'off';
+
+  // 阅读偏好 → 博客/关于正文 CSS 变量
+  el.style.setProperty('--post-fs', READING_FS_PX[s.reading.fontSize]);
+  el.style.setProperty('--post-lh', READING_LH[s.reading.lineHeight]);
+  el.style.setProperty('--post-measure', READING_MEASURE[s.reading.width]);
 }
 
-/** main.ts 挂载前调用一次:应用当前值 + 后续变化实时应用 */
+/** main.ts 挂载前调用一次:应用当前值 + 后续变化实时应用 + 系统主题变化跟随 */
 export function initSettings(): void {
   applySettings(state.settings.value);
   watchEffect(() => applySettings(state.settings.value));
+  // auto 主题:OS 切深浅色时实时跟随(无 matchMedia 环境静默跳过)
+  if (typeof window.matchMedia === 'function') {
+    try {
+      const mq = window.matchMedia('(prefers-color-scheme: dark)');
+      const onChange = () => applySettings(state.settings.value);
+      if (typeof mq.addEventListener === 'function') mq.addEventListener('change', onChange);
+      else mq.addListener?.(onChange);
+    } catch {
+      /* 极老环境无 media query 支持,auto 静止为初始解析值 */
+    }
+  }
 }

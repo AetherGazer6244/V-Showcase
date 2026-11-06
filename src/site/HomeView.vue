@@ -210,6 +210,7 @@ function isRowHovered(): boolean {
 function canRotate(): boolean {
   return settings.value.autoRotate
     && settings.value.animate
+    && settings.value.motion
     && !prefersReducedMotion()
     && allLoaded.value
     && !document.hidden
@@ -222,10 +223,11 @@ function canRotate(): boolean {
     && !isScreensaverActive();
 }
 
-/** 是否可以安排计时(开关/动画/减少动态效果/卸载) */
+/** 是否可以安排计时(开关/动画/动效总闸/减少动态效果/卸载) */
 function canScheduleRotate(): boolean {
   return settings.value.autoRotate
     && settings.value.animate
+    && settings.value.motion
     && !prefersReducedMotion()
     && !disposed;
 }
@@ -565,7 +567,7 @@ watch(() => settings.value.rows, (n) => {
 
 /* 轮换开关/间隔变更 → 立刻重排(关闭则清计时器) */
 watch(
-  [() => settings.value.autoRotate, () => settings.value.rotateSec],
+  [() => settings.value.autoRotate, () => settings.value.rotateSec, () => settings.value.motion],
   () => scheduleRotate(),
 );
 

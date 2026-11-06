@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script>try{if(JSON.parse(localStorage.getItem("vshowcase.settings")||"{}").theme==="light")document.documentElement.dataset.theme="light"}catch(e){}</script>
-  <meta name="theme-color" content="#14161a">
+  <script>try{var s=JSON.parse(localStorage.getItem("vshowcase.settings")||"{}").theme,d=s==="dark"||((!s||s==="auto")&&window.matchMedia&&matchMedia("(prefers-color-scheme: dark)").matches);if(d)document.documentElement.dataset.theme="dark"}catch(e){}</script>
+  <meta name="theme-color" content="#fdfdfd">
   <!-- 图片走普通 <img> 非 CORS 加载:preconnect 带 crossorigin 会建另一条
        TLS 连接池,等于白连;不带才是同一条连接 -->
   <link rel="preconnect" href="https://7bu.top">

@@ -199,11 +199,14 @@ let initialized = false;
 /** (重新)武装闲置计时。幂等:已有计时则不动。 */
 function armIdleTimer(): void {
   if (idleTimer) return;
-  const idleMin = useSettings().settings.value.screensaver.idleMin;
-  if (!idleMin || state.active.value || document.hidden) return;
+  const s = useSettings().settings.value;
+  const idleMin = s.screensaver.idleMin;
+  // 动效总开关关闭 = 屏保自动进入一并静止(总闸压住一切动画;手动进入不受限)
+  if (!idleMin || !s.motion || state.active.value || document.hidden) return;
   idleTimer = setTimeout(() => {
     idleTimer = null;
-    if (!document.hidden && !state.active.value) void showScreensaver();
+    const motionOn = useSettings().settings.value.motion;
+    if (motionOn && !document.hidden && !state.active.value) void showScreensaver();
   }, idleMin * 60_000);
 }
 
