@@ -11,6 +11,7 @@ tools/
 ├── dev.bat                      ← Windows 一站式：装依赖 + 启服务 + 打开浏览器(DevTools 自动开)
 ├── console.bat                  ← Windows 快捷键：服务已启时直接打开浏览器(DevTools 自动开)
 ├── site.bat / site.sh           ← ★ 主站(Vue 站点)一键预览：build + wrangler pages dev + 开浏览器(真实图片)
+├── deploy.bat                   ← ★ 一键发布线上：build + wrangler pages deploy → vshowcase.pages.dev
 ├── package.json                 ← Node 依赖
 ├── README.md                    ← 本文件
 │
