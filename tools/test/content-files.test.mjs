@@ -120,10 +120,11 @@ describe('validateProjectsDoc', () => {
 });
 
 describe('readPlaylist / readProjects(真实数据文件)', () => {
-  it('playlist.json 为合法数组(本期空库)', async () => {
+  it('playlist.json 为合法数组(v2.3 种子:5 首 netease)', async () => {
     const doc = await readPlaylist();
     expect(Array.isArray(doc)).toBe(true);
-    expect(doc.length).toBe(0);
+    expect(doc.length).toBe(5);
+    expect(doc.every((t) => t.source === 'netease' && /^\d+$/.test(t.id))).toBe(true);
   });
 
   it('projects.json 与站点数据一致且通过校验', async () => {

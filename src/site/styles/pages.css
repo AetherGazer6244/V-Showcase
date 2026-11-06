@@ -99,97 +99,52 @@
   .blog-card-title { font-size: 1.1rem; }
 }
 
-/* ============ 音乐页 ============ */
-.music-toolbar {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  margin-bottom: var(--space-4);
+/* ============ 音乐页(v2.3 对齐 Cecilian-Hub:大封面 + 歌词/列表 Tab)============ */
+.music-stage {
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) 1fr;
+  gap: var(--space-6);
+  align-items: start;
 }
 
-.track-list {
-  list-style: none;
+/* 左:大封面 */
+.music-cover-col {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-}
-
-.track-card {
-  display: grid;
-  grid-template-columns: 34px 52px 1fr auto auto;
-  align-items: center;
   gap: var(--space-3);
-  padding: 10px 14px;
-  width: 100%;
-  text-align: left;
-  font: inherit;
-}
-.track-card:disabled { opacity: 0.55; cursor: not-allowed; }
-.track-card:disabled:hover { transform: none; box-shadow: var(--card-shadow); }
-
-.track-card.active {
-  border-color: var(--accent);
-  background: var(--accent-soft);
 }
 
-.track-no {
-  text-align: center;
-  color: var(--text-sub);
-  font-variant-numeric: tabular-nums;
-  font-size: var(--fs-sm);
-}
-.track-card.active .track-no { color: var(--accent-text); font-weight: 800; }
-
-.track-cover {
+.music-cover {
   position: relative;
-  width: 52px;
-  height: 52px;
-  border-radius: var(--radius-md);
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-xl);
   overflow: hidden;
   background: var(--img-bg);
+  box-shadow: var(--card-shadow);
+  border: 1px solid var(--glass-border);
+  transition: box-shadow 0.4s ease;
 }
-.track-cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.track-cover-fallback {
+.music-cover.playing { box-shadow: var(--hover-glow); }
+.music-cover img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.music-cover-fallback {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 3rem;
   color: var(--accent);
   opacity: 0.5;
-  font-size: 1.3rem;
   background: linear-gradient(135deg, var(--accent-soft), transparent);
 }
 
-.track-meta { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.track-title {
-  color: var(--text-main);
-  font-weight: 700;
-  font-size: var(--fs-md);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.track-card.active .track-title { color: var(--accent-text); }
-.track-artist {
-  color: var(--text-sub);
-  font-size: var(--fs-xs);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.track-source { cursor: default; }
-.track-state {
-  min-width: 3.5em;
-  text-align: right;
-  color: var(--accent-text);
-  font-size: var(--fs-xs);
-  font-weight: 700;
-}
-
 .music-error {
-  margin-top: var(--space-4);
   padding: 10px 16px;
   border-radius: var(--radius-md);
   border: 1px solid rgba(180, 30, 50, 0.35);
@@ -205,13 +160,329 @@
   font-family: ui-monospace, Consolas, monospace;
 }
 
-@media (max-width: 700px) {
-  .track-card { grid-template-columns: 30px 44px 1fr; }
-  .track-source, .track-state { display: none; }
-  .track-cover { width: 44px; height: 44px; }
+/* 右:面板 */
+.music-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: 22px 24px;
 }
 
-/* ============ 项目页 ============ */
+.music-now { display: flex; flex-direction: column; gap: 3px; }
+.music-now-title {
+  color: var(--text-main);
+  font-size: var(--fs-xl);
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.music-now-artist {
+  color: var(--text-sub);
+  font-size: var(--fs-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.music-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.music-time {
+  color: var(--text-sub);
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+  flex: none;
+  min-width: 3em;
+}
+.music-time:last-child { text-align: right; }
+
+.music-trackbar {
+  position: relative;
+  flex: 1;
+  height: 16px;
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+}
+.music-trackbar::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 5px;
+  transform: translateY(-50%);
+  border-radius: var(--radius-full);
+  background: var(--chip-bg);
+}
+.music-trackbar-fill {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  height: 5px;
+  transform: translateY(-50%);
+  border-radius: var(--radius-full);
+  background: linear-gradient(90deg, var(--brand-1), var(--brand-2));
+  pointer-events: none;
+}
+.music-trackbar-fill::after {
+  content: "";
+  position: absolute;
+  right: -5px;
+  top: 50%;
+  width: 11px;
+  height: 11px;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--accent);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.music-trackbar:hover .music-trackbar-fill::after { opacity: 1; }
+
+.music-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.music-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--glass-border);
+  background: var(--chip-bg);
+  color: var(--text-sub);
+  font: inherit;
+  font-size: var(--fs-xs);
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.music-mode:hover { color: var(--accent-text); border-color: var(--accent); }
+.music-ctl {
+  border: 0;
+  background: none;
+  color: var(--text-sub);
+  font-size: 1.15rem;
+  line-height: 1;
+  padding: 6px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+.music-ctl:hover { color: var(--text-main); transform: scale(1.1); }
+.music-ctl-main {
+  width: 46px;
+  height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  color: #fff;
+  background: linear-gradient(135deg, var(--brand-1), var(--brand-2));
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.35);
+}
+.music-ctl-main:hover { color: #fff; filter: brightness(1.06); }
+.music-ctl-main:active { transform: scale(0.94); }
+.music-vol {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  color: var(--text-sub);
+  font-size: 0.9rem;
+}
+.music-vol-range {
+  width: 92px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* Tab 行 */
+.music-tabs {
+  display: flex;
+  gap: var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+.music-tab {
+  border: 0;
+  background: none;
+  padding: 8px 2px;
+  margin-bottom: -1px;
+  color: var(--text-sub);
+  font: inherit;
+  font-size: var(--fs-md);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.music-tab:hover { color: var(--text-main); }
+.music-tab.on {
+  color: var(--accent-text);
+  font-weight: 800;
+  border-bottom-color: var(--accent);
+}
+
+/* 歌词滚动区 */
+.music-lyrics {
+  height: 280px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 8px;
+  scroll-behavior: smooth;
+}
+.music-lrc-line {
+  border: 0;
+  background: none;
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+  color: var(--text-sub);
+  font: inherit;
+  font-size: var(--fs-md);
+  line-height: 1.9;
+  cursor: pointer;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+.music-lrc-line:hover { color: var(--text-main); }
+.music-lrc-line.active {
+  color: var(--accent-text);
+  font-weight: 800;
+  transform: scale(1.05);
+}
+.music-lrc-none {
+  margin: auto;
+  color: var(--text-sub);
+  font-size: var(--fs-sm);
+  letter-spacing: 0.05em;
+}
+
+/* 列表 Tab */
+.music-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.music-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px;
+  border-radius: var(--radius-full);
+  background: var(--chip-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--text-sub);
+  transition: border-color 0.2s ease;
+}
+.music-search:focus-within { border-color: var(--accent); }
+.music-search-icon { width: 15px; height: 15px; flex: none; }
+.music-search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  outline: none;
+  font: inherit;
+  font-size: var(--fs-sm);
+  color: var(--text-main);
+}
+.music-search input::placeholder { color: var(--text-sub); }
+
+.music-rows {
+  max-height: 264px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 4px;
+}
+.music-row {
+  display: grid;
+  grid-template-columns: 26px 44px 1fr auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 8px 10px;
+  border-radius: var(--radius-lg);
+  border: 1px solid transparent;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.music-row:hover { background: var(--chip-bg); }
+.music-row:disabled { opacity: 0.5; cursor: not-allowed; }
+.music-row.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.music-row-no {
+  text-align: center;
+  color: var(--text-sub);
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+}
+.music-row.active .music-row-no { color: var(--accent-text); font-weight: 800; }
+.music-row-cover {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--img-bg);
+}
+.music-row-cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.music-row-cover-fb {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  opacity: 0.5;
+  background: linear-gradient(135deg, var(--accent-soft), transparent);
+}
+.music-row-meta { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.music-row-title {
+  color: var(--text-main);
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.music-row.active .music-row-title { color: var(--accent-text); }
+.music-row-artist {
+  color: var(--text-sub);
+  font-size: var(--fs-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.music-row-src {
+  color: var(--text-sub);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.03em;
+}
+
+@media (max-width: 900px) {
+  .music-stage { grid-template-columns: 1fr; }
+  .music-cover-col { max-width: 280px; margin: 0 auto; width: 100%; }
+  .music-vol { display: none; }
+}
+
+/* ============ 项目页(v2.3 对齐 Cecilian-Hub ProjectsBoard:玻璃矩阵)============ */
 .projects-filter {
   display: flex;
   flex-wrap: wrap;
@@ -219,39 +490,138 @@
   margin-bottom: var(--space-5);
 }
 
+/* 居中药丸搜索(Cecilian-Hub 同款) */
+.projects-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 460px;
+  margin: 0 0 var(--space-5);
+  padding: 11px 20px;
+  border-radius: var(--radius-full);
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--card-shadow);
+  color: var(--text-sub);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.projects-search:focus-within {
+  border-color: var(--accent);
+  box-shadow: var(--hover-glow);
+}
+.projects-search-icon { width: 16px; height: 16px; flex: none; }
+.projects-search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  outline: none;
+  font: inherit;
+  font-size: var(--fs-sm);
+  color: var(--text-main);
+}
+.projects-search input::placeholder { color: var(--text-sub); }
+
 .project-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fill, minmax(min(420px, 100%), 1fr));
+  gap: var(--space-5);
 }
 
 .project-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding: 20px 22px;
+  padding: 24px 26px;
+  overflow: hidden;
 }
 
+/* 右上角装饰光晕,hover 增强(Cecilian-Hub 卡片语言) */
+.project-card::before {
+  content: "";
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 128px;
+  height: 128px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  filter: blur(28px);
+  opacity: 0.7;
+  transition: opacity 0.3s ease, background 0.3s ease;
+  pointer-events: none;
+}
+.project-card:hover::before { opacity: 1; }
+
 .project-head {
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
-.project-name { font-size: var(--fs-lg); font-weight: 800; color: var(--text-main); }
+.project-icon {
+  flex: none;
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: 1.2rem;
+  font-weight: 900;
+}
+.project-name {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  color: var(--text-main);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.project-github {
+  flex: none;
+  color: var(--text-sub);
+  transition: color 0.2s ease;
+}
+.project-github:hover { color: var(--text-main); }
+.project-github svg { width: 22px; height: 22px; display: block; }
 
 .project-status-active { background: var(--accent-soft); color: var(--accent-text); font-weight: 700; }
 
 .project-desc {
+  position: relative;
   color: var(--text-sub);
   font-size: var(--fs-sm);
-  line-height: 1.75;
+  line-height: 1.8;
   flex: 1;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 4em;
 }
 
-.project-tech { display: flex; flex-wrap: wrap; gap: 6px; }
+.project-tech {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.project-tech .chip {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-weight: 700;
+}
 
 .project-foot {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;

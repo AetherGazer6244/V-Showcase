@@ -217,29 +217,43 @@ onMounted(async () => {
     </div>
   </section>
 
-  <!-- 图集网格 -->
+  <!-- 图集网格(拍立得叠层,对齐 Cecilian-Hub photowall) -->
   <main v-if="mode === 'albums'" class="gallery-main" aria-label="相册列表">
     <div class="gallery-grid">
       <article
         v-for="(album, i) in filtered"
         :key="album.id || 'unassigned'"
-        class="gallery-card"
+        class="gallery-card fade-in-up"
         :class="{ 'is-uncategorized': album.unassigned }"
+        :style="{ animationDelay: `${i * 50}ms` }"
         tabindex="0"
         @click="openAlbum(i)"
         @keydown="onCardKeydown($event, i)"
       >
-        <div class="img-box cover-box" :class="orientClass(album.cover)">
-          <img
-            :src="srcOverrides.get(album.cover) ?? album.cover"
-            :alt="album.name"
-            :style="focalStyle(album.cover)"
-            :class="{ 'is-loaded': loadedCovers.has(album.cover) }"
-            loading="lazy"
-            decoding="async"
-            @load="onCoverLoad(album.cover)"
-            @error="onCoverError(album.cover)"
-          >
+        <!-- 三层拍立得:底层灰阶错位,hover 张开 -->
+        <div class="gallery-stack">
+          <div class="gallery-stack-layer back2 img-box" :class="orientClass(album.images[2] || '')" aria-hidden="true">
+            <img v-if="album.images[2]" :src="srcOverrides.get(album.images[2]) ?? album.images[2]" alt="" loading="lazy" decoding="async">
+          </div>
+          <div class="gallery-stack-layer back1 img-box" :class="orientClass(album.images[1] || '')" aria-hidden="true">
+            <img v-if="album.images[1]" :src="srcOverrides.get(album.images[1]) ?? album.images[1]" alt="" loading="lazy" decoding="async">
+          </div>
+          <div class="gallery-stack-layer front img-box" :class="orientClass(album.cover)">
+            <img
+              :src="srcOverrides.get(album.cover) ?? album.cover"
+              :alt="album.name"
+              :style="focalStyle(album.cover)"
+              :class="{ 'is-loaded': loadedCovers.has(album.cover) }"
+              loading="lazy"
+              decoding="async"
+              @load="onCoverLoad(album.cover)"
+              @error="onCoverError(album.cover)"
+            >
+            <div class="gallery-stack-veil" aria-hidden="true">
+              <span class="gallery-stack-veil-count">{{ album.count }} 张照片</span>
+              <span class="gallery-stack-veil-hint">点击查看</span>
+            </div>
+          </div>
         </div>
         <div class="gallery-card-meta">
           <span class="gallery-card-title">{{ album.name }}</span>

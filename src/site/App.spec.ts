@@ -87,9 +87,9 @@ describe('App.vue 常驻层装配', () => {
     expect(app.findAll('.footer-link').some((a) => a.text() === '关于')).toBe(true);
   });
 
-  it('全局播放条已挂载(占位渲染不报错)', async () => {
+  it('迷你播放胶囊未选曲时不渲染(挂载不报错)', async () => {
     const app = await mountApp();
-    // PlayerBar 常驻层:无曲目时自隐藏,但组件本身必须能装配
-    expect(app.find('.player-bar').exists()).toBe(false);
+    // FloatingCapsule 常驻层:无曲目时自隐藏(v-show if index<0),装配不能报错
+    expect(app.find('.capsule-anchor').exists()).toBe(false);
   });
 });

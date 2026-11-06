@@ -22,7 +22,7 @@ import { ref, computed, readonly } from 'vue';
 import { resolvePlaylist, PLAYLIST } from './playlist';
 import type { Track } from './playlist';
 
-export type PlayMode = 'order' | 'loop' | 'shuffle';
+export type PlayMode = 'order' | 'single' | 'loop' | 'shuffle';
 
 const LS_KEY = 'vshowcase.player';
 const CHANNEL_NAME = 'vshowcase-player';
@@ -77,7 +77,9 @@ export function activeLrcIndex(lines: LrcLine[], time: number): number {
   return ans;
 }
 
-/** 下一首索引(mode 纯函数,可单测;shuffle 用随机,空/单曲返回自身) */
+/** 下一首索引(mode 纯函数,可单测;shuffle 用随机,空/单曲返回自身)。
+ *  注意 single(单曲循环)在【手动切歌】时按顺序前进,只在播完时原地重播
+ *  (onEnded 单独处理),与 Cecilian-Hub 行为一致 */
 export function nextIndex(index: number, mode: PlayMode, len: number): number {
   if (len <= 0) return -1;
   if (len === 1) return 0;
@@ -86,9 +88,8 @@ export function nextIndex(index: number, mode: PlayMode, len: number): number {
     while (n === index) n = Math.floor(Math.random() * len);
     return n;
   }
-  const step = mode === 'loop' ? 1 : 1;
-  const next = index + step;
-  if (next >= len) return mode === 'loop' ? 0 : index;  // order 停在最后一首
+  const next = index + 1;
+  if (next >= len) return mode === 'loop' ? 0 : index;  // order/single 停在最后一首
   return next;
 }
 
@@ -147,7 +148,7 @@ function clamp01(v: number): number {
   return Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 0.8;
 }
 function isValidMode(v: unknown): boolean {
-  return v === 'order' || v === 'loop' || v === 'shuffle';
+  return v === 'order' || v === 'single' || v === 'loop' || v === 'shuffle';
 }
 
 const current = computed<Track | null>(() => (index.value >= 0 && index.value < tracks.value.length ? tracks.value[index.value] : null));
@@ -198,6 +199,12 @@ function onEnded(): void {
   const len = tracks.value.length;
   if (len === 0) return;
   const modeV = mode.value;
+  if (modeV === 'single' && audio) {
+    // 单曲循环:原地重播
+    audio.currentTime = 0;
+    void audio.play().catch(() => { /* 自动续播被拦时停在起点 */ });
+    return;
+  }
   if (modeV === 'order' && index.value === len - 1) {
     // 顺序模式播完最后一句:停住,回起点待播
     playing.value = false;
@@ -298,11 +305,15 @@ function setVolume(v: number): void {
 }
 
 function cycleMode(): void {
-  mode.value = mode.value === 'order' ? 'loop' : mode.value === 'loop' ? 'shuffle' : 'order';
+  mode.value = mode.value === 'order' ? 'single'
+    : mode.value === 'single' ? 'loop'
+    : mode.value === 'loop' ? 'shuffle' : 'order';
   persist();
 }
 
-const MODE_LABEL: Record<PlayMode, string> = { order: '顺序', loop: '循环', shuffle: '随机' };
+const MODE_LABEL: Record<PlayMode, string> = { order: '顺序', single: '单曲', loop: '循环', shuffle: '随机' };
+/** 模式图标(胶囊/音乐页共用):→ 顺序 ↻ 单曲 ∞ 循环 ⤨ 随机 */
+const MODE_GLYPH: Record<PlayMode, string> = { order: '→', single: '↻', loop: '∞', shuffle: '⤨' };
 
 /* ---------- 初始化 ---------- */
 
@@ -377,6 +388,7 @@ export function usePlayer() {
     volume: readonly(volume),
     mode: readonly(mode),
     MODE_LABEL,
+    MODE_GLYPH,
     lrcLines,
     activeLrcIdx: readonly(activeLrcIdx),
     playAt: (i: number) => playAt(i),

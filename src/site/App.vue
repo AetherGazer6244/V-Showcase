@@ -7,7 +7,7 @@ import { initScreensaver } from './screensaver';
 import { formatInt } from '@/shared/utils';
 import Lightbox from './Lightbox.vue';
 import ScreensaverOverlay from './ScreensaverOverlay.vue';
-import PlayerBar from './PlayerBar.vue';
+import FloatingCapsule from './FloatingCapsule.vue';
 
 /** 入口 HTML 内联脚本注入的视图标识(home/blog/post/gallery/music/projects/about/settings/notfound) */
 const view = window.__VIEW__ || 'home';
@@ -53,7 +53,8 @@ type ViewKey = keyof typeof views;
 const currentView = computed(() => views[(view as ViewKey) in views ? (view as ViewKey) : 'notfound']);
 
 /* 灯箱与屏保是全站常驻层(任意页面都能唤起),保持静态引入。
- * PlayerBar 同理:全局播放条常驻底部(无曲目时自隐藏)。 */
+ * FloatingCapsule 同理:迷你播放胶囊常驻右下角(无曲目时自隐藏,
+ * 主页隐身但不销毁 —— 跨页续播状态在 player.ts 单例里)。 */
 /* ⚠ 教训(docs/lessons-learned 3.4):改 import 块时逐个确认模板组件
  * 「import 还在」——生产构建缺 import 会静默渲染成未知元素,零警告。 */
 
@@ -124,5 +125,5 @@ onMounted(() => {
 
   <Lightbox />
   <ScreensaverOverlay />
-  <PlayerBar />
+  <FloatingCapsule :hidden="view === 'home'" />
 </template>

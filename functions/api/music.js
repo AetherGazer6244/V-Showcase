@@ -163,8 +163,12 @@ function json(status, obj, headers) {
   });
 }
 
-/** 浏览器缓存:10 分钟,同页刷新/翻回不重复回源 */
+/** 浏览器缓存:10 分钟,同页刷新/翻回不重复回源。
+ *  注意:cache.match 命中的 Response 头不可变(Workers 规范),
+ *  直接 headers.set 会抛「Can't modify immutable headers」,
+ *  因此复制头并新建 Response 返回。 */
 function withBrowserCache(res) {
-  res.headers.set('Cache-Control', 'public, max-age=600');
-  return res;
+  const headers = new Headers(res.headers);
+  headers.set('Cache-Control', 'public, max-age=600');
+  return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
 }

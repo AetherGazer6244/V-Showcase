@@ -209,10 +209,12 @@ function json(status, obj, headers) {
   });
 }
 
-/** 浏览器缓存:短 TTL,只做同页刷新去重;边缘那份由入缓存的目录副本另行控时 */
+/** 浏览器缓存:短 TTL,只做同页刷新去重;边缘那份由入缓存的目录副本另行控时。
+ *  与 music.js 同理:cache.match 命中的 Response 头不可变,复制后新建返回 */
 function withBrowserCache(res) {
-  res.headers.set('Cache-Control', 'public, max-age=60');
-  return res;
+  const headers = new Headers(res.headers);
+  headers.set('Cache-Control', 'public, max-age=60');
+  return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
 }
 
 /**

@@ -309,8 +309,8 @@
 .top-fade-enter-from,
 .top-fade-leave-to { opacity: 0; transform: translateY(10px); }
 
-/* 播放条出现时回顶部按钮上移让位 */
-body.has-player .back-top { bottom: 160px; }
+/* 迷你播放胶囊(v2.3,右下角)出现时回顶部按钮上移让位 */
+body.has-player .back-top { bottom: 104px; }
 
 @media (max-width: 768px) {
   .post-header { padding-top: 32px; }
@@ -320,5 +320,5 @@ body.has-player .back-top { bottom: 160px; }
   .sibling-card.right { max-width: 100%; margin-left: 0; text-align: left; }
   .sibling-spacer { display: none; }
   .back-top { right: 16px; bottom: 84px; }
-  body.has-player .back-top { bottom: 150px; }
+  body.has-player .back-top { bottom: 140px; }
 }

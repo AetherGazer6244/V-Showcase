@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { parseLrc, activeLrcIndex, nextIndex } from './player';
-import { resolvePlaylist, urlTrackId } from './playlist';
+import { resolvePlaylist, urlTrackId, NETEASE_CHUNK } from './playlist';
 import { PROJECTS, STATUS_FILTERS } from './projects';
 
 describe('parseLrc — LRC 歌词解析', () => {
@@ -62,6 +62,11 @@ describe('nextIndex / prevIndex — 播放模式', () => {
     expect(nextIndex(1, 'loop', 3)).toBe(2);
   });
 
+  it('single:手动切歌按顺序前进(播完原地重播由 onEnded 处理,不在此层)', () => {
+    expect(nextIndex(0, 'single', 3)).toBe(1);
+    expect(nextIndex(2, 'single', 3)).toBe(2);   // 到尾即停
+  });
+
   it('shuffle:不重复自身', () => {
     for (let i = 0; i < 20; i++) {
       const n = nextIndex(1, 'shuffle', 3);
@@ -73,6 +78,7 @@ describe('nextIndex / prevIndex — 播放模式', () => {
 
   it('单曲/空库边界', () => {
     expect(nextIndex(0, 'order', 1)).toBe(0);
+    expect(nextIndex(0, 'single', 1)).toBe(0);
     expect(nextIndex(0, 'shuffle', 1)).toBe(0);
     expect(nextIndex(0, 'order', 0)).toBe(-1);
   });
@@ -106,6 +112,45 @@ describe('playlist 解析', () => {
   it('非法 netease ID 不发请求,标记为无效', async () => {
     const { tracks } = await resolvePlaylist([{ source: 'netease', id: 'abc!!' }]);
     expect(tracks[0].title).toContain('无效');
+  });
+
+  it(`netease 分块:超过 ${NETEASE_CHUNK} 首拆多次请求,顺序回填(上游大批量会 5xx)`, async () => {
+    const calls: string[] = [];
+    const stub = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      calls.push(url);
+      const ids = new URL(url, 'http://x').searchParams.get('ids') || '';
+      const songs = ids.split(',').map((id) => ({ id, name: `歌${id}`, artist: 'A', cover: '', url: `u:${id}`, lrc: '' }));
+      return new Response(JSON.stringify({ status: true, message: 'success', data: { songs } }), { status: 200 });
+    });
+    try {
+      const inputs = Array.from({ length: NETEASE_CHUNK + 1 }, (_, n) => ({ source: 'netease' as const, id: String(1000 + n) }));
+      const { tracks, failed } = await resolvePlaylist(inputs);
+      expect(calls).toHaveLength(2);                       // 4 + 1 两块
+      expect(calls[0]).toContain(`ids=1000,1001,1002,1003`);
+      expect(calls[1]).toContain('ids=1004');
+      expect(failed).toBe(0);
+      expect(tracks.map((t) => t.title)).toEqual(['歌1000', '歌1001', '歌1002', '歌1003', '歌1004']);
+    } finally {
+      stub.mockRestore();
+    }
+  });
+
+  it('分块下单块失败只损失该块,其余正常回填', async () => {
+    const stub = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const ids = new URL(String(input), 'http://x').searchParams.get('ids') || '';
+      if (ids.includes('2000')) return new Response('boom', { status: 500 });  // 第一块挂
+      const songs = ids.split(',').map((id) => ({ id, name: `歌${id}`, artist: 'A', cover: '', url: `u:${id}`, lrc: '' }));
+      return new Response(JSON.stringify({ status: true, message: 'success', data: { songs } }), { status: 200 });
+    });
+    try {
+      const inputs = Array.from({ length: NETEASE_CHUNK + 1 }, (_, n) => ({ source: 'netease' as const, id: String(2000 + n) }));
+      const { tracks, failed } = await resolvePlaylist(inputs);
+      expect(failed).toBe(NETEASE_CHUNK);                  // 只有第一块 4 首失败
+      expect(tracks[NETEASE_CHUNK].title).toBe('歌2004');  // 第二块正常
+    } finally {
+      stub.mockRestore();
+    }
   });
 });
 

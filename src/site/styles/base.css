@@ -44,18 +44,21 @@
   --hover-shadow:   0 14px 32px rgba(31, 35, 45, 0.16);
   --hover-shadow-sm: 0 8px 22px rgba(31, 35, 45, 0.12);
 
-  /* 品牌色:琥珀(简洁明亮定位) */
-  --brand-1: #f59e0b;
-  --brand-2: #fbbf24;
-  --brand-deep: #b45309;
+  /* 品牌色:靛蓝(2026-11 v2.3 与 Cecilian-Hub 姊妹站风格对齐) */
+  --brand-1: #6366f1;
+  --brand-2: #818cf8;
+  --brand-deep: #4f46e5;
   --accent: var(--brand-1);
-  --accent-soft: rgba(245, 158, 11, 0.14);
-  --accent-text: #b45309;
+  --accent-soft: rgba(99, 102, 241, 0.14);
+  --accent-text: #4f46e5;
+  /* 靛蓝泛光阴影:卡片/胶囊 hover 的彩色辉光 */
+  --hover-glow: 0 12px 30px rgba(99, 102, 241, 0.22);
 
   /* ---- 设计 token:圆角 / 间距 / 字号 ---- */
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
+  --radius-xl: 24px;
   --radius-full: 999px;
   --space-1: 4px;
   --space-2: 8px;
@@ -103,9 +106,10 @@
   --hover-shadow:   0 18px 40px rgba(0, 0, 0, 0.5);
   --hover-shadow-sm: 0 12px 32px rgba(0, 0, 0, 0.45);
 
-  --brand-deep: #fbbf24;
-  --accent-soft: rgba(245, 158, 11, 0.18);
-  --accent-text: #fbbf24;
+  --brand-deep: #a5b4fc;
+  --accent-soft: rgba(99, 102, 241, 0.2);
+  --accent-text: #a5b4fc;
+  --hover-glow: 0 14px 34px rgba(99, 102, 241, 0.32);
 }
 
 /* ============ 基础重置 ============ */
@@ -121,6 +125,8 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  /* 固定页脚胶囊(v2.3):页面内容预留底部空间,滚动到底不被遮挡 */
+  padding-bottom: 64px;
 }
 
 /* 视图 chunk 加载失败的兜底(App.vue 的 errorComponent) */
@@ -144,41 +150,54 @@ body {
 
 /* ============ 设计 token 公共组件类 ============ */
 
-/* 页头:每页统一的方位感区(顶栏之外的第二重定位) */
+/* 页头:每页统一的方位感区(顶栏之外的第二重定位)
+ * v2.3 对齐 Cecilian-Hub:超大黑体标题 + 宽字距 */
 .page-header {
-  max-width: 720px;
+  max-width: 860px;
   width: 100%;
   margin: 0 auto;
   padding: 64px 60px 36px;
 }
 .page-header-title {
-  font-size: var(--fs-page);
-  font-weight: 800;
-  letter-spacing: 0.05em;
+  font-size: clamp(1.9rem, 3.4vw, 2.6rem);
+  font-weight: 900;
+  letter-spacing: 0.14em;
   color: var(--text-main);
 }
 .page-header-sub {
   margin-top: var(--space-2);
   color: var(--text-sub);
   font-size: var(--fs-md);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
 }
-.page-header-main { max-width: 720px; width: 100%; margin: 0 auto; padding: 0 60px 80px; }
+.page-header-main { max-width: 860px; width: 100%; margin: 0 auto; padding: 0 60px 96px; }
 
-/* 通用卡片:白底细边,hover 抬升(墙面 .card 不受影响,此类为内容页卡片) */
+/* 入场动画:v2.3 全站统一(fade-in-up);受动效总开关与
+ * prefers-reduced-motion 双重压制(overrides.css 的 data-motion='off' 规则) */
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-in-up { animation: fade-in-up 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+
+/* 通用卡片:v2.3 玻璃化(毛玻璃 + 白边 + 圆角加大),
+ * hover 浮起 + 靛蓝泛光(Cecilian-Hub 卡片语言) */
 .panel-card {
-  background: var(--glass-plain);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
   box-shadow: var(--card-shadow);
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  transition: box-shadow 0.25s ease, transform 0.25s ease, border-color 0.25s ease;
 }
 a.panel-card,
 button.panel-card { text-decoration: none; color: inherit; cursor: pointer; }
 a.panel-card:hover,
 button.panel-card:hover {
-  box-shadow: var(--card-shadow-hover);
-  transform: translateY(-2px);
+  box-shadow: var(--hover-glow);
+  border-color: var(--glass-border-strong);
+  transform: translateY(-3px);
 }
 
 /* 胶囊 chip(标签/技术栈/筛选) */
@@ -312,13 +331,21 @@ button.chip.active {
 
 /* ============ 页脚胶囊 ============
  * logo 回主页 + 关于入口 + GitHub 链接 + 访客统计
+ * v2.3:固定在底部常驻可见(不随滚动消失);
+ * 容器 pointer-events 穿透,只有胶囊本身可交互。
  * (未启用 D1 时自动只剩链接) */
 .site-footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 16px;
+  z-index: 40;
+  padding: 0 20px;
   text-align: center;
-  padding: 28px 20px 36px;
   font-size: 0.85rem;
   font-weight: 700;
   color: var(--text-sub);
+  pointer-events: none;
 }
 
 .footer-capsule {
@@ -329,9 +356,10 @@ button.chip.active {
   border-radius: var(--radius-full);
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   box-shadow: var(--nav-shadow);
+  pointer-events: auto;
 }
 
 /* 胶囊头:琥珀圆点 logo 钮(一键回主页) */
@@ -416,8 +444,7 @@ button.chip.active {
   transform: translate(-50%, 0);
 }
 
-/* 播放条常驻时给页脚让位(播放条 fixed 底部,避免遮住胶囊) */
-body.has-player .site-footer { padding-bottom: 84px; }
+/* 固定页脚胶囊已在 body 主规则预留底部空间 */
 
 /* ============ 萤火画布(仅暗色主题;fireflies.ts 驱动) ============ */
 #fireflies {

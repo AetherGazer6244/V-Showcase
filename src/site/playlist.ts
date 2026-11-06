@@ -79,16 +79,19 @@ function fromUrlInput(t: UrlTrackInput): Track {
   };
 }
 
+/** /api/music 批量补全的分块大小:每首要 2 条上游请求,分块限制单次
+ *  回源压力,且单块失败只损失该块(其余块与边缘缓存照常生效) */
+export const NETEASE_CHUNK = 4;
+
 export interface PlaylistResult {
   /** 顺序 = PLAYLIST 声明顺序(netease 批量补全后按原位回填) */
-  tracks: Track[];
-  /** netease 解析失败的数量(ID 不存在/代理不可达) */
+  tracks: Track[];  /** netease 解析失败的数量(ID 不存在/代理不可达) */
   failed: number;
 }
 
 /**
- * 解析曲库:直链同步映射;netease 收集 id 批量走 /api/music 一次补全。
- * 代理不可达/无结果 → netease 条目整批跳过(failed 计数),直链不受影响。
+ * 解析曲库:直链同步映射;netease 收集 id 按 NETEACE_CHUNK 分块走 /api/music 补全。
+ * 单块代理不可达/无结果 → 该块条目跳过(failed 计数),其余块与直链不受影响。
  */
 export async function resolvePlaylist(playlist: TrackInput[] = PLAYLIST): Promise<PlaylistResult> {
   const neteaseIdx: number[] = [];
@@ -111,38 +114,35 @@ export async function resolvePlaylist(playlist: TrackInput[] = PLAYLIST): Promis
 
   let failed = 0;
   if (ids.length > 0) {
-    try {
-      const res = await fetch(`/api/music?ids=${ids.join(',')}`);
-      const body = res.ok ? await res.json() : null;
-      const byId = new Map<string, unknown>();
-      for (const s of (body && body.status && body.data && body.data.songs) || []) {
-        byId.set(String(s.id), s);
-      }
-      for (const [k, i] of neteaseIdx.entries()) {
-        const s = byId.get(ids[k]) as {
-          name?: string; artist?: string; cover?: string; url?: string; lrc?: string;
-        } | undefined;
-        if (s) {
-          tracks[i] = {
-            source: 'netease',
-            id: ids[k],
-            url: s.url || '',
-            title: s.name || `歌曲 ${ids[k]}`,
-            artist: s.artist || '未知歌手',
-            cover: s.cover || '',
-            lrc: s.lrc || '',
-          };
-        } else {
-          failed += 1;
-          tracks[i] = {
-            source: 'netease', id: ids[k], url: '', title: `歌曲 ${ids[k]}(加载失败)`,
-            artist: '', cover: '', lrc: '',
-          };
+    /* 上游代理对大批量 ids 会 5xx(实测一次 5 首必失败、4 首稳定):
+     * 分块(每块 ≤ CHUNK)串行请求,单块失败只损失该块,其余照常回填。 */
+    const byId = new Map<string, {
+      name?: string; artist?: string; cover?: string; url?: string; lrc?: string;
+    }>();
+    for (let start = 0; start < ids.length; start += NETEASE_CHUNK) {
+      const chunkIds = ids.slice(start, start + NETEASE_CHUNK);
+      try {
+        const res = await fetch(`/api/music?ids=${chunkIds.join(',')}`);
+        const body = res.ok ? await res.json() : null;
+        for (const s of (body && body.status && body.data && body.data.songs) || []) {
+          byId.set(String(s.id), s);
         }
-      }
-    } catch {
-      failed = ids.length;
-      for (const [k, i] of neteaseIdx.entries()) {
+      } catch { /* 该块失败:回填按缺失计 failed */ }
+    }
+    for (const [k, i] of neteaseIdx.entries()) {
+      const s = byId.get(ids[k]);
+      if (s) {
+        tracks[i] = {
+          source: 'netease',
+          id: ids[k],
+          url: s.url || '',
+          title: s.name || `歌曲 ${ids[k]}`,
+          artist: s.artist || '未知歌手',
+          cover: s.cover || '',
+          lrc: s.lrc || '',
+        };
+      } else {
+        failed += 1;
         tracks[i] = {
           source: 'netease', id: ids[k], url: '', title: `歌曲 ${ids[k]}(加载失败)`,
           artist: '', cover: '', lrc: '',
