@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /* V-Showcase Tools — 共享数据文件读取器。
  * 安全要点:历史版本用 (0, eval) 解析 viewer 文件,混入表达式会被真的执行;
  * 现版本只用 acorn 静态解析,只接受 Object/Array/Literal,任何其它节点抛错,绝不执行。 */
