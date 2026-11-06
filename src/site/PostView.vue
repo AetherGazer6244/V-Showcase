@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { findPost, formatDateCN, postHref } from './posts';
+import { siteConfig } from './siteConfig';
 import { useLightbox } from './composables';
 
 /* slug 来源优先级:
@@ -14,6 +15,15 @@ const slug = window.__POST_SLUG__
 const post = computed(() => findPost(slug));
 
 const lb = useLightbox();
+
+/** 封面:文章自带 → 站点默认封面(空串 = 渲染渐变兜底层) */
+const coverSrc = computed(() => (post.value ? post.value.cover || siteConfig.defaultCover : ''));
+
+/** 点封面进灯箱(与列表卡/图集一致) */
+function openCover(): void {
+  if (!post.value || !coverSrc.value) return;
+  lb.open([{ url: coverSrc.value, name: post.value.title }], 0);
+}
 
 /* ---- TOC ----
  * 桌面端右侧悬浮(≥1100px),移动端文章顶部折叠(details)。
@@ -88,54 +98,82 @@ watch(() => post.value?.slug, () => setupTocObserver());
 
 <template>
   <template v-if="post">
-    <section class="page-header post-header">
-      <nav class="post-breadcrumb" aria-label="面包屑">
-        <a href="blog.html">← 博客</a>
-      </nav>
-      <h1 class="page-header-title post-title">{{ post.title }}</h1>
-      <p class="page-header-sub post-meta">
-        <time :datetime="post.date">{{ formatDateCN(post.date) }}</time>
-        <span class="blog-meta-dot" aria-hidden="true">·</span>
-        <span>约 {{ post.readingMin }} 分钟</span>
-        <span class="blog-meta-dot" aria-hidden="true">·</span>
-        <span>{{ post.wordCount }} 字</span>
-      </p>
-    </section>
-
     <main class="page-header-main post-main">
-      <!-- 移动端目录:文章顶部折叠 -->
-      <details v-if="post.toc.length" class="post-toc-details">
-        <summary>目录</summary>
-        <nav class="post-toc-list" aria-label="文章目录">
-          <a
-            v-for="t in post.toc"
-            :key="t.id"
-            :href="`#${t.id}`"
-            :class="[`toc-d${t.depth}`, { active: activeId === t.id }]"
-          >{{ t.text }}</a>
-        </nav>
-      </details>
+      <!-- 详情卡:封面卡顶 + 玻璃大卡(v2.4 对齐 Cecilian-Hub) -->
+      <article class="post-card panel-card fade-in-up">
+        <!-- 封面:aspect-video 卡顶,点击进灯箱;无封面 → 靛蓝渐变兜底 -->
+        <div class="post-cover">
+          <img
+            v-if="coverSrc"
+            :src="coverSrc"
+            :alt="post.title"
+            class="post-cover-img"
+            @click="openCover"
+          >
+          <div v-else class="post-cover-fallback" aria-hidden="true"></div>
+        </div>
 
-      <article
-        class="post-prose"
-        @click="onArticleClick"
-      ><!-- html 由构建期渲染(marked + highlight.js),可信产物 -->
-        <div v-html="post.html"></div>
+        <div class="post-card-body">
+          <nav class="post-breadcrumb" aria-label="面包屑">
+            <a href="blog.html">← 博客</a>
+          </nav>
+          <h1 class="post-title">{{ post.title }}</h1>
+
+          <!-- meta 胶囊条:日期 / 时长 / 字数 / 标签(点标签回列表筛选) -->
+          <div class="post-pillbar">
+            <span class="post-pill post-pill-date">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" stroke-width="2"/>
+                <path d="M12 8v4l3 3" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <time :datetime="post.date">{{ formatDateCN(post.date) }}</time>
+            </span>
+            <span class="post-pill">约 {{ post.readingMin }} 分钟</span>
+            <span class="post-pill">{{ post.wordCount }} 字</span>
+            <a
+              v-for="t in post.tags"
+              :key="t"
+              class="post-pill post-pill-tag"
+              :href="`blog.html?tag=${encodeURIComponent(t)}`"
+              :title="`查看「${t}」标签下的文章`"
+            ><span aria-hidden="true">#</span> {{ t }}</a>
+          </div>
+
+          <!-- 移动端目录:文章顶部折叠 -->
+          <details v-if="post.toc.length" class="post-toc-details">
+            <summary>目录</summary>
+            <nav class="post-toc-list" aria-label="文章目录">
+              <a
+                v-for="t in post.toc"
+                :key="t.id"
+                :href="`#${t.id}`"
+                :class="[`toc-d${t.depth}`, { active: activeId === t.id }]"
+              >{{ t.text }}</a>
+            </nav>
+          </details>
+
+          <article
+            class="post-prose"
+            @click="onArticleClick"
+          ><!-- html 由构建期渲染(marked + highlight.js),可信产物 -->
+            <div v-html="post.html"></div>
+          </article>
+
+          <!-- 上一篇 / 下一篇 -->
+          <nav v-if="post.prev || post.next" class="post-sibling" aria-label="相邻文章">
+            <a v-if="post.next" class="panel-card sibling-card" :href="postHref(post.next.slug)">
+              <span class="sibling-label">← 更新一篇</span>
+              <span class="sibling-title">{{ post.next.title }}</span>
+            </a>
+            <span v-else class="sibling-spacer" aria-hidden="true"></span>
+            <a v-if="post.prev" class="panel-card sibling-card right" :href="postHref(post.prev.slug)">
+              <span class="sibling-label">更早一篇 →</span>
+              <span class="sibling-title">{{ post.prev.title }}</span>
+            </a>
+            <span v-else class="sibling-spacer" aria-hidden="true"></span>
+          </nav>
+        </div>
       </article>
-
-      <!-- 上一篇 / 下一篇 -->
-      <nav v-if="post.prev || post.next" class="post-sibling" aria-label="相邻文章">
-        <a v-if="post.next" class="panel-card sibling-card" :href="postHref(post.next.slug)">
-          <span class="sibling-label">← 更新一篇</span>
-          <span class="sibling-title">{{ post.next.title }}</span>
-        </a>
-        <span v-else class="sibling-spacer" aria-hidden="true"></span>
-        <a v-if="post.prev" class="panel-card sibling-card right" :href="postHref(post.prev.slug)">
-          <span class="sibling-label">更早一篇 →</span>
-          <span class="sibling-title">{{ post.prev.title }}</span>
-        </a>
-        <span v-else class="sibling-spacer" aria-hidden="true"></span>
-      </nav>
     </main>
 
     <!-- 桌面端悬浮目录 -->

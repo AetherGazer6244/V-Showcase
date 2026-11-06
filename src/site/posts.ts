@@ -27,6 +27,8 @@ export interface Post {
   /** yyyy-MM-dd */
   date: string;
   cover: string;
+  /** front-matter 标签(归一化:去重、上限 6,可为空数组) */
+  tags: string[];
   excerpt: string;
   wordCount: number;
   readingMin: number;

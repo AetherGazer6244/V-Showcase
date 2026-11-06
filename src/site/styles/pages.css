@@ -3,23 +3,37 @@
  * 内容: 博客列表卡片 / 音乐曲目行 / 项目栅格 / 关于页
  * ============================================================ */
 
-/* ============ 博客列表 ============ */
+/* ============ 博客列表(v2.4 对齐 Cecilian-Hub 全封面文章卡)============ */
+/* 标签筛选行 */
+.blog-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: var(--space-5);
+}
+.blog-tag-chip { font-variant-numeric: tabular-nums; }
+
+/* 卡片网格:全封面压字卡(panel-card 提供玻璃底/hover 浮起泛光) */
 .blog-list {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   gap: var(--space-5);
 }
 
 .blog-card {
-  display: grid;
-  grid-template-columns: 240px 1fr;
-  overflow: hidden;
+  position: relative;
+  overflow: hidden;              /* 封面放大时按 24px 圆角裁切 */
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;     /* 内容压底 */
 }
 
+/* 全封面铺底层 */
 .blog-card-cover {
-  position: relative;
-  height: 100%;
-  min-height: 168px;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
   background: var(--img-bg);
 }
 .blog-card-cover img {
@@ -28,64 +42,118 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  opacity: 0.92;
   cursor: zoom-in;
-  transition: transform 0.25s ease;
+  transition: transform 1s ease;   /* Hub 同款慢速 Ken Burns */
 }
-.blog-card:hover .blog-card-cover img { transform: scale(1.03); }
+.blog-card:hover .blog-card-cover img { transform: scale(1.05); }
 
-/* 无图占位:琥珀渐变 + 大引号意象 */
+/* 无封面:靛蓝渐变兜底 + 笔意象 */
 .blog-cover-fallback {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, var(--accent-soft), transparent 65%),
-              linear-gradient(315deg, var(--chip-bg), transparent 55%);
+  background: linear-gradient(135deg, var(--brand-deep), var(--brand-1) 48%, var(--brand-2));
 }
 .blog-cover-fallback::after {
   content: "✎";
   position: absolute;
-  right: 14px;
-  bottom: 6px;
-  font-size: 2.6rem;
-  color: var(--accent);
-  opacity: 0.28;
+  right: 16px;
+  bottom: 8px;
+  font-size: 3rem;
+  color: rgba(255, 255, 255, 0.18);
 }
 
+/* 底部黑渐变(Hub: from-black/90 via-black/30 to-transparent) */
+.blog-card-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    to top,
+    rgba(2, 6, 23, 0.92) 0%,
+    rgba(2, 6, 23, 0.42) 42%,
+    rgba(2, 6, 23, 0) 74%
+  );
+}
+
+/* 压底内容(白字) */
 .blog-card-body {
-  padding: 18px 22px;
-  min-width: 0;
+  position: relative;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  padding: 22px 24px;
+  min-width: 0;
+}
+
+.blog-card-pills {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+/* meta 胶囊:黑玻璃白字(Hub date pill 语言) */
+.blog-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(10, 14, 25, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.blog-pill svg { width: 12px; height: 12px; flex: none; }
+.blog-pill-date {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 标签胶囊:靛蓝(Hub "Latest Insight" 语言);可点,点击筛选本标签 */
+.blog-pill-tag {
+  color: #fff;
+  font-weight: 700;
+  background: rgba(99, 102, 241, 0.78);
+  border-color: transparent;
+  cursor: pointer;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+.blog-pill-tag:hover {
+  background: var(--brand-1);
+  box-shadow: var(--hover-glow);
+  transform: translateY(-1px);
+}
+.blog-pill-tag.on {
+  background: var(--brand-deep);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.45) inset;
 }
 
 .blog-card-title {
-  font-size: var(--fs-xl);
+  color: #fff;
+  font-size: 1.45rem;
   font-weight: 800;
-  line-height: 1.4;
-  color: var(--text-main);
+  line-height: 1.35;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
+  transition: transform 0.3s ease;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.blog-card:hover .blog-card-title { color: var(--accent-text); }
-
-.blog-card-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  color: var(--text-sub);
-  font-size: var(--fs-xs);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.03em;
-}
-.blog-meta-dot { opacity: 0.55; }
+.blog-card:hover .blog-card-title { transform: translateY(-2px); }
 
 .blog-card-excerpt {
-  color: var(--text-sub);
+  color: rgba(226, 232, 240, 0.85);
   font-size: var(--fs-sm);
-  line-height: 1.75;
+  line-height: 1.7;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.4);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -93,10 +161,11 @@
 }
 
 @media (max-width: 700px) {
-  .blog-card { grid-template-columns: 1fr; }
-  .blog-card-cover { min-height: 0; height: 150px; }
-  .blog-card-body { padding: 14px 16px; }
-  .blog-card-title { font-size: 1.1rem; }
+  .blog-list { grid-template-columns: 1fr; }
+  .blog-card { min-height: 240px; }
+  .blog-card-body { padding: 16px 18px; }
+  .blog-card-title { font-size: 1.2rem; }
+  .blog-card-excerpt { display: none; }   /* 移动端只留 pills + 标题 */
 }
 
 /* ============ 音乐页(v2.3 对齐 Cecilian-Hub:大封面 + 歌词/列表 Tab)============ */

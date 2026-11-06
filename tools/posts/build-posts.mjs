@@ -14,6 +14,7 @@
  *   - 标题自动挂 slug id(TOC 锚点)
  *   - draft: true 的文章跳过,不进产物
  *   - 摘要缺省取正文首段纯文本;阅读时长按中文 400 字/分估算
+ *   - front-matter tags:数组或逗号/顿号分隔字符串,归一化上限 6 个
  *
  * 纯函数(正则清洗/slug/摘要/时长)可被 tools/test 单测直接导入;
  * main() 仅在 CLI 直跑时执行。
@@ -96,6 +97,29 @@ export function readingMinutes(plainText) {
   return Math.max(1, Math.ceil(plainText.length / READ_WPM));
 }
 
+/** 单个标签上限(字符),超长截断防撑爆胶囊 */
+const TAG_MAX_CHARS = 16;
+/** 全文标签上限,超出丢弃(胶囊行放不下) */
+const TAG_MAX_COUNT = 6;
+
+/** front-matter tags 归一化:数组或逗号/顿号分隔字符串 →
+ *  去空去重(trim) → 逐个截断 → 上限 6 个。非法输入一律回空数组。 */
+export function normalizeTags(value) {
+  let list = [];
+  if (Array.isArray(value)) list = value;
+  else if (typeof value === 'string') list = value.split(/[,、，;；\s]+/);
+  else return [];
+  const out = [];
+  for (const t of list) {
+    if (typeof t !== 'string') continue;
+    const clean = t.trim().slice(0, TAG_MAX_CHARS);
+    if (!clean) continue;
+    if (!out.includes(clean)) out.push(clean);
+    if (out.length >= TAG_MAX_COUNT) break;
+  }
+  return out;
+}
+
 /** front-matter + 正文 → 文章数据(不含 prev/next,由 assemblePosts 补) */
 export function buildOne(slug, raw) {
   const { data, content } = matter(raw);
@@ -141,6 +165,7 @@ export function buildOne(slug, raw) {
     title: String(data.title ?? slug),
     date,
     cover: typeof data.cover === 'string' ? data.cover : '',
+    tags: normalizeTags(data.tags),
     excerpt: typeof data.excerpt === 'string' && data.excerpt.trim() ? data.excerpt.trim() : excerptOf(body),
     wordCount: plain.length,
     readingMin: readingMinutes(plain),

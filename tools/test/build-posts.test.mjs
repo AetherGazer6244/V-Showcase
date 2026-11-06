@@ -8,7 +8,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   preclean, slugifyHeading, createSlugger, toPlainText,
-  excerptOf, readingMinutes, assemblePosts, isValidSlug, buildOne,
+  excerptOf, readingMinutes, assemblePosts, isValidSlug, buildOne, normalizeTags,
 } from '../posts/build-posts.mjs';
 import { extractAssets, renderPostPage, renderSitemap } from '../posts/build-post-pages.mjs';
 
@@ -98,6 +98,28 @@ describe('assemblePosts 装配', () => {
     const input = [mk('a', '2026-01-01'), mk('b', '2026-02-01')];
     assemblePosts(input);
     expect(input.map((p) => p.slug)).toEqual(['a', 'b']);
+  });
+});
+
+describe('normalizeTags 标签归一化', () => {
+  it('数组:去空去重 trim', () => {
+    expect(normalizeTags([' 前端 ', '前端', '', 'Vue 3'])).toEqual(['前端', 'Vue 3']);
+  });
+
+  it('字符串:逗号/顿号/分号/空白皆可分隔', () => {
+    expect(normalizeTags('a,b、c；d;e f')).toEqual(['a', 'b', 'c', 'd', 'e', 'f']);
+  });
+
+  it('非数组非字符串 → 空数组;数组内非字符串项跳过', () => {
+    expect(normalizeTags(42)).toEqual([]);
+    expect(normalizeTags(null)).toEqual([]);
+    expect(normalizeTags(['ok', 3, null])).toEqual(['ok']);
+  });
+
+  it('单标签超长截断,总数上限 6', () => {
+    expect(normalizeTags(['x'.repeat(99)])).toHaveLength(1);
+    expect(normalizeTags(['x'.repeat(99)])[0].length).toBeLessThanOrEqual(16);
+    expect(normalizeTags(['1', '2', '3', '4', '5', '6', '7', '8'])).toHaveLength(6);
   });
 });
 
