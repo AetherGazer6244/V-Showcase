@@ -506,32 +506,33 @@ html, body {
   background: var(--border);
 }
 
-/* ─── 模态框(毛玻璃) ─────────────────────── */
+/* ─── 模态框(玻璃卡 + 遮罩) ─────────────────────── */
 .modal {
   position: fixed; inset: 0; z-index: 100;
   display: flex; align-items: center; justify-content: center;
+  padding: 24px;
 }
 .modal.hidden { display: none; }
 .modal-mask {
   position: absolute; inset: 0;
-  background: rgba(8, 10, 14, 0.55);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(6, 8, 12, 0.62);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 .modal-body {
   position: relative;
-  background: rgba(27, 31, 40, 0.88);
+  background: rgba(27, 31, 40, 0.90);
   backdrop-filter: blur(24px) saturate(1.3);
   -webkit-backdrop-filter: blur(24px) saturate(1.3);
-  border: 1px solid var(--border);
-  border-radius: 24px;
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--pop-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.06);
   padding: 26px;
   width: 90vw; max-width: 720px;
   max-height: 90vh;
   overflow-y: auto;
   display: flex; flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   animation: modal-in 0.22s ease;
 }
 @keyframes modal-in {
@@ -549,8 +550,15 @@ html, body {
 }
 .modal-close:hover { background: var(--glass-strong); color: var(--text); }
 .modal-close:disabled { opacity: 0.4; cursor: not-allowed; }
-.modal-title { font-size: 1.1rem; font-weight: 800; }
-.modal-hint { color: var(--text-sub); font-size: 0.82rem; margin-bottom: 10px; }
+/* 标题区(与内容/操作区三段式分隔) */
+.modal-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 0 42px 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.modal-hint { color: var(--text-sub); font-size: 0.82rem; margin-bottom: 0; }
 
 /* 确认弹窗(confirm.ts + ConfirmModal.vue) */
 .confirm-message {
@@ -656,7 +664,11 @@ html, body {
   object-fit: cover;
   object-position: var(--pv-x, 50%) var(--pv-y, 25%);
 }
-.ctrl-actions { justify-content: flex-end; }
+.ctrl-actions {
+  justify-content: flex-end;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
 .ctrl-spacer { flex: 1; }
 .modal-source {
   font-size: 0.7rem;
@@ -978,9 +990,9 @@ html, body {
   background: rgba(27, 31, 40, 0.92);
   backdrop-filter: blur(24px) saturate(1.3);
   -webkit-backdrop-filter: blur(24px) saturate(1.3);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--pop-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.06);
   animation: modal-in 0.22s ease;
 }
 .upload-head {
@@ -989,6 +1001,8 @@ html, body {
   justify-content: space-between;
   cursor: grab;
   user-select: none;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
 }
 .upload-head:active { cursor: grabbing; }
 .upload-head-close {
