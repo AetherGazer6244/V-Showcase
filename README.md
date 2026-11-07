@@ -56,7 +56,7 @@ Manager「博客 / 音乐 / 项目」Tab 保存即校验并重建产物;「保�
 **Cloudflare Pages（Git 集成）**，Dashboard → Pages → Settings：
 
 1. Builds：Build command `npm run build`，输出目录 `dist`（Git 集成会忽略 wrangler.toml 的构建配置，必须手动设）
-2. 环境变量（Production / Preview 都填）：`NODE_VERSION=20`、`TOKEN`（Secret，7bu.top token）
+2. 环境变量（Production / Preview 都填）：`QUBU_TOKEN`（Secret，7bu.top token，完整值含竖线）、`SITE_PASSWORD`（Secret，前台整站密码，见下节）、`NODE_VERSION=20`（可选，Node 22 亦可构建）
 
 推 main 自动部署。备选：CLI `npx wrangler pages deploy dist`，或仓库自带的 GitHub Actions（配 `CLOUDFLARE_API_TOKEN` 即可）。
 
@@ -72,6 +72,17 @@ npm run db:schema:remote           # 建表（本地开发用 db:schema:local）
 ```
 
 查明细：`npx wrangler d1 execute v-showcase-db --remote --command "SELECT * FROM daily_stats"`
+
+### 整站密码登录（v2.9.0）
+
+前台整站由 `functions/_middleware.js` 拦截：未登录访问任何页面 → 内联登录页；未登录调 API → 401。
+
+- **fail-closed**：`SITE_PASSWORD` 未配置时全站锁定并显示明确提示页——有意不同于 images.js 的「缺配置降级放行」，私站的锁必须一眼可见
+- 会话：HMAC-SHA256 签名 cookie（HttpOnly / Secure / SameSite=Lax），30 天免登录；**签名密钥就是密码本身，改密码 = 所有已登录设备全部下线**（刻意不设独立 `AUTH_SECRET`，否则改密码踢不掉人）
+- 防爆破：密码恒时比较 + 错误响应固定延迟 1s；建议再配 1 条 CF 免费版 WAF 限流规则（如同一 IP 10 次/分钟）兜底
+- 登出：底部胶囊「退出」→ `/api/logout` 清 cookie → 回登录页显示「已退出登录」
+- 本地开发：复制 `.dev.vars.example` 为 `.dev.vars`（已 gitignore），填入 `SITE_PASSWORD`
+- 有意接受的副作用：搜索引擎无法收录内页（爬虫只见登录页）；访客统计只统计已登录访客
 
 ## 注意事项
 
@@ -139,6 +150,7 @@ schema.sql      D1 表结构(daily_stats / visitors / likes)
 - [x] 音乐页重做「云端乐律」(v2.8:大标题/副标题 hero + 黑胶唱片卡(播放旋转/同心纹/中心孔) + 歌词/歌单居中胶囊分段 + 歌词当前行靛蓝放大淡出滚动 + 当前封面模糊背景(亮暗双主题遮罩) + 控件行 SVG 化(四态模式/大圆播放) + 歌单复用搜索即播)
 - [x] 项目页(状态筛选卡片)与关于页(siteConfig 身份卡 + about.md + 最近动态)
 - [x] Manager 写作台(博客/音乐/项目三 Tab,保存即校验重建,单文件部署)
+- [x] 前台整站密码登录(v2.9.0:`_middleware.js` 全站拦截 fail-closed(未配密码锁死显提示页) + 内联登录页/锁定页零外部资源 + HMAC 签名会话 cookie 30 天免登录(改密码=全员下线) + 恒时比较/错密码延迟 1s + `/api/logout` 与底部「退出」入口)
 - [ ] 设置搭建(站长端深水区:数据源切换 UI)
 
 
