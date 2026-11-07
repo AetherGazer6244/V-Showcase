@@ -409,7 +409,7 @@ onUnmounted(() => {
       class="btn"
       :title="viewMode === 'crop' ? '当前:裁剪预览(能看到焦点落在哪、脸有没有被切)。点击切换成完整图。' : '当前:完整图。点击切换成裁剪预览。'"
       @click="toggleView"
-    >{{ viewMode === 'crop' ? '✂️ 裁剪预览' : '🖼 完整图' }}</button>
+    >{{ viewMode === 'crop' ? '裁剪预览' : '完整图' }}</button>
     <button
       class="btn"
       :title="`网格密度(当前:${ICON_LABEL[iconSize]}),点击切换`"
@@ -419,15 +419,15 @@ onUnmounted(() => {
       class="btn"
       :title="`筛选(当前:${FILTER_LABEL[filterMode]}),点击切换`"
       @click="cycleFilter"
-    >☉ {{ FILTER_LABEL[filterMode] }}</button>
+    >{{ FILTER_LABEL[filterMode] }}</button>
     <button
       class="btn"
       :class="selectMode ? 'btn-primary' : ''"
       :title="selectMode ? '退出多选(Esc)' : '进入多选:批量按横竖预填焦点 / 批量清除'"
       @click="toggleSelectMode"
-    >☑ {{ selectMode ? '多选中' : '多选' }}</button>
-    <button class="btn btn-primary" title="用 face-api 检测人脸,自动填充缺失的焦点" @click="startAi">🧠 AI 批量分析</button>
-    <button class="btn btn-ghost" @click="openExport">📋 导出 JSON</button>
+    >{{ selectMode ? '多选中' : '多选' }}</button>
+    <button class="btn btn-primary" title="用 face-api 检测人脸,自动填充缺失的焦点" @click="startAi">AI 批量分析</button>
+    <button class="btn btn-ghost" @click="openExport">导出 JSON</button>
   </Teleport>
 
   <!-- 状态条 -->
@@ -510,8 +510,8 @@ onUnmounted(() => {
   <div v-if="selectMode" class="batch-bar">
     <span class="batch-count">已选 {{ selected.size }} / {{ shownImages.length }}</span>
     <button class="btn" @click="selectAllUnset">全选未设({{ unsetCount }})</button>
-    <button class="btn btn-primary" :disabled="!selected.size" title="竖图 y=0.33 / 横图 y=0.5 / 方图 y=0.4,之后可单张微调" @click="applyBatchPreset">📐 按横竖预填焦点</button>
-    <button class="btn btn-danger" :disabled="!selected.size" @click="applyBatchClear">🗑️ 清除焦点</button>
+    <button class="btn btn-primary" :disabled="!selected.size" title="竖图 y=0.33 / 横图 y=0.5 / 方图 y=0.4,之后可单张微调" @click="applyBatchPreset">按横竖预填焦点</button>
+    <button class="btn btn-danger" :disabled="!selected.size" @click="applyBatchClear">清除焦点</button>
     <span class="batch-sep" />
     <button class="btn" :disabled="!selected.size" title="标记显示时顺时针旋转 90°(图床剥 EXIF 的横躺图转正)" @click="applyBatchOrient(90)">↻ 90°</button>
     <button class="btn" :disabled="!selected.size" @click="applyBatchOrient(180)">↻ 180°</button>
@@ -541,8 +541,8 @@ onUnmounted(() => {
       <h2 class="modal-title">导出焦点配置</h2>
       <textarea :value="exportText" class="export-text" readonly />
       <div class="ctrl-row ctrl-actions">
-        <button class="btn" @click="copyExport">📋 复制到剪贴板</button>
-        <button class="btn" @click="downloadExport">💾 下载 focalPoints.ts</button>
+        <button class="btn" @click="copyExport">复制到剪贴板</button>
+        <button class="btn" @click="downloadExport">下载 focalPoints.ts</button>
         <span class="ctrl-spacer" />
         <button class="btn" @click="exportOpen = false">关闭</button>
       </div>
@@ -554,7 +554,7 @@ onUnmounted(() => {
     <div class="modal-mask" @click="!aiRunning && (aiOpen = false)" />
     <div class="modal-body modal-body-small">
       <button class="modal-close" aria-label="关闭" :disabled="aiRunning" @click="aiOpen = false">×</button>
-      <h2 class="modal-title">🧠 AI 焦点批量分析日志</h2>
+      <h2 class="modal-title">AI 焦点批量分析日志</h2>
       <pre class="ai-log">{{ aiLog }}</pre>
       <div class="ctrl-row ctrl-actions">
         <span class="ctrl-spacer" />

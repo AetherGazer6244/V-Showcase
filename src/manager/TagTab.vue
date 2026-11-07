@@ -204,7 +204,7 @@ function openInNewTab(url: string) {
           class="album-tile-remove"
           title="清空该图全部标签"
           @click.stop="clearTags(img.url)"
-        >✕</button>
+        >×</button>
         <div class="album-frame" title="点击看大图" @click="openInNewTab(img.url)">
           <img
             :src="img.thumb || img.url"
@@ -218,7 +218,7 @@ function openInNewTab(url: string) {
           <div class="tag-chips">
             <span v-for="t in mergedTags(img.url)" :key="t" class="tag-chip">
               {{ t }}
-              <button class="tag-chip-x" :title="`移除「${t}」`" @click.stop="removeTag(img.url, t)">✕</button>
+              <button class="tag-chip-x" :title="`移除「${t}」`" @click.stop="removeTag(img.url, t)">×</button>
             </span>
             <span v-if="mergedTags(img.url).length === 0" class="tag-none">未打标签</span>
           </div>

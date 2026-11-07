@@ -68,9 +68,9 @@ async function onSaveDeploy() {
       <button class="btn" type="button" @click="addTrack('netease')">+ 网易云曲目</button>
       <button class="btn" type="button" @click="addTrack('url')">+ 直链曲目</button>
       <span class="mt-bar-gap"></span>
-      <button class="btn" type="button" :disabled="loading" @click="onSave">💾 保存</button>
+      <button class="btn" type="button" :disabled="loading" @click="onSave">保存</button>
       <button class="btn btn-primary" type="button" :disabled="loading || deploying" @click="onSaveDeploy">
-        {{ deploying ? '推送中…' : '🚀 保存并部署' }}
+        {{ deploying ? '推送中…' : '保存并部署' }}
       </button>
     </div>
 
@@ -136,7 +136,7 @@ async function onSaveDeploy() {
           <td class="mt-ops">
             <button class="icon-btn" type="button" title="上移" :disabled="i === 0" @click="move(i, -1)">↑</button>
             <button class="icon-btn" type="button" title="下移" :disabled="i === tracks.length - 1" @click="move(i, 1)">↓</button>
-            <button class="icon-btn icon-btn-danger" type="button" title="删除" @click="removeTrack(i)">✕</button>
+            <button class="icon-btn icon-btn-danger" type="button" title="删除" @click="removeTrack(i)">×</button>
           </td>
         </tr>
       </tbody>

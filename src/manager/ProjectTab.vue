@@ -67,9 +67,9 @@ async function onSaveDeploy() {
     <div class="pt-bar">
       <button class="btn" type="button" @click="addProject">+ 新项目</button>
       <span class="pt-bar-gap"></span>
-      <button class="btn" type="button" :disabled="loading" @click="onSave">💾 保存</button>
+      <button class="btn" type="button" :disabled="loading" @click="onSave">保存</button>
       <button class="btn btn-primary" type="button" :disabled="loading || deploying" @click="onSaveDeploy">
-        {{ deploying ? '推送中…' : '🚀 保存并部署' }}
+        {{ deploying ? '推送中…' : '保存并部署' }}
       </button>
     </div>
 
@@ -85,7 +85,7 @@ async function onSaveDeploy() {
             <option value="wip">进行中</option>
             <option value="archived">已归档</option>
           </select>
-          <button class="icon-btn icon-btn-danger" type="button" title="删除" @click="removeProject(i)">✕</button>
+          <button class="icon-btn icon-btn-danger" type="button" title="删除" @click="removeProject(i)">×</button>
         </div>
         <textarea v-model="p.desc" class="input pt-desc" rows="3" placeholder="一句话介绍" @input="markDirty"></textarea>
         <div class="pt-row">

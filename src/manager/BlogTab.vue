@@ -210,11 +210,11 @@ async function onSaveDeploy() {
         <input v-model="currentSlug" class="input bt-slug" aria-label="文件名" @input="markDirty">
         <span class="bt-ext">.md</span>
         <span class="bt-filebar-gap"></span>
-        <button class="btn" type="button" :disabled="!canSave" @click="onSave">💾 保存</button>
+        <button class="btn" type="button" :disabled="!canSave" @click="onSave">保存</button>
         <button class="btn btn-primary" type="button" :disabled="!canSave || deploying" @click="onSaveDeploy">
-          {{ deploying ? '推送中…' : '🚀 保存并部署' }}
+          {{ deploying ? '推送中…' : '保存并部署' }}
         </button>
-        <button class="btn btn-danger" type="button" @click="onDelete">🗑 删除</button>
+        <button class="btn btn-danger" type="button" @click="onDelete">删除</button>
       </div>
 
       <div class="bt-fields">

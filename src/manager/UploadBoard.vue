@@ -150,7 +150,7 @@ onUnmounted(() => {
       <div class="modal-mask" @click="emit('close')" />
       <div class="upload-board" :style="{ left: pos.x + 'px', top: pos.y + 'px' }">
         <div class="upload-head" @mousedown.prevent="onHeadDown">
-          <h2 class="modal-title">🖼 上传图片到图床</h2>
+          <h2 class="modal-title">上传图片到图床</h2>
           <button class="upload-head-close" aria-label="关闭" @click="emit('close')">×</button>
         </div>
 
@@ -196,8 +196,8 @@ onUnmounted(() => {
                 class="btn btn-small"
                 title="复制外链"
                 @click="copyUrl(it.url!)"
-              >📋 复制</button>
-              <button class="btn btn-small btn-ghost" title="移除" @click="removeItem(i)">✕</button>
+              >复制</button>
+              <button class="btn btn-small btn-ghost" title="移除" @click="removeItem(i)">×</button>
             </div>
           </div>
         </div>

@@ -245,7 +245,7 @@ function openInNewTab(url: string) {
           @click="toast('把图片拖到这里解除归属')"
           @dragover.prevent
           @drop.prevent="draggingUrl && assign(draggingUrl, null); draggingUrl = null"
-        >🚮 未分组</div>
+        >未分组</div>
         <AlbumChip
           v-for="a in albumMeta"
           :key="a.id"
@@ -291,7 +291,7 @@ function openInNewTab(url: string) {
           class="album-tile-remove"
           title="解除归属"
           @click.stop="assign(img.url, null)"
-        >✕</button>
+        >×</button>
         <div class="album-frame">
           <img
             :src="img.thumb || img.url"
@@ -305,7 +305,7 @@ function openInNewTab(url: string) {
           <div
             class="album-tile-tag"
             :class="{ 'is-none': !mergedAlbumId(img.url) }"
-          >{{ mergedAlbumId(img.url) ? '📁' : '·' }} {{ mergedAlbumId(img.url) ? metaById[mergedAlbumId(img.url)!]?.name : '未分组' }}</div>
+          >{{ mergedAlbumId(img.url) ? '·' : '·' }} {{ mergedAlbumId(img.url) ? metaById[mergedAlbumId(img.url)!]?.name : '未分组' }}</div>
         </div>
       </div>
       <div v-if="state.imagesLoaded.value && filteredImages.length === 0" class="empty">无匹配项</div>

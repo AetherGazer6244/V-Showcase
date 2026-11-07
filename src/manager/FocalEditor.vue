@@ -153,10 +153,10 @@ onUnmounted(() => {
         <div class="ctrl-row ctrl-actions">
           <button class="btn" title="上一张(←)" @click="emit('nav', -1)">←</button>
           <button class="btn" title="下一张(→)" @click="emit('nav', 1)">→</button>
-          <button class="btn btn-danger" @click="emit('clear')">🗑️ 清除该图</button>
+          <button class="btn btn-danger" @click="emit('clear')">清除该图</button>
           <span class="ctrl-spacer" />
           <button class="btn" @click="emit('close')">取消</button>
-          <button class="btn btn-primary" @click="emit('apply', { x: point.x, y: point.y })">✓ 保存</button>
+          <button class="btn btn-primary" @click="emit('apply', { x: point.x, y: point.y })">保存</button>
           <button class="btn" @click="emit('applyNext', { x: point.x, y: point.y })">存并下一张 →</button>
         </div>
       </div>
