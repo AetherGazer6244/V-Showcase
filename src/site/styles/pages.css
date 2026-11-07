@@ -203,11 +203,11 @@
 }
 :root[data-theme='dark'] .music-bg-veil { background: rgba(10, 12, 18, 0.82); }
 
-/* 头部:大标题 + 副标题(压在模糊背景上,居中) */
+/* 头部:大标题 + 副标题(压在模糊背景上,左对齐参考图) */
 .music-hero {
   position: relative;
   z-index: 1;
-  text-align: center;
+  text-align: left;
 }
 .music-hero-meta {
   margin-top: var(--space-2);
@@ -215,16 +215,23 @@
   font-size: var(--fs-xs);
   letter-spacing: 0.06em;
 }
+/* 音乐页容器脱耦全局 860px:参考图内容宽 ≈1200px */
+.music-page .page-header {
+  max-width: 1200px;
+  padding: 48px 48px 20px;
+}
 .music-page .page-header-main {
   position: relative;
   z-index: 1;
+  max-width: 1200px;
+  padding: 0 48px 96px;
 }
 
-/* 双卡布局:左黑胶卡 + 右歌词/歌单卡 */
+/* 双卡布局:左黑胶卡 + 右歌词/歌单卡(≈5:7,对齐参考图) */
 .music-stage {
   display: grid;
-  grid-template-columns: minmax(250px, 320px) 1fr;
-  gap: var(--space-5);
+  grid-template-columns: minmax(320px, 5fr) minmax(0, 7fr);
+  gap: 24px;
   align-items: stretch;
 }
 .music-card {
@@ -237,7 +244,7 @@
 /* 左卡:黑胶唱片(播放旋转 + 同心纹 + 中心孔) */
 .music-vinyl {
   position: relative;
-  width: min(240px, 88%);
+  width: min(260px, 82%);
   aspect-ratio: 1 / 1;
   margin: 4px auto 0;
   border-radius: 50%;
@@ -349,24 +356,27 @@
   white-space: nowrap;
 }
 
-/* 进度条 */
+/* 进度:条全宽在上,时间在条下两端对齐(参考图样式) */
 .music-progress {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 4px;
+}
+.music-times {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
 }
 .music-time {
   color: var(--text-sub);
   font-size: var(--fs-xs);
   font-variant-numeric: tabular-nums;
-  flex: none;
-  min-width: 3em;
 }
-.music-time:last-child { text-align: right; }
 
 .music-trackbar {
   position: relative;
-  flex: 1;
+  flex: none;
+  width: 100%;
   height: 16px;
   border: 0;
   padding: 0;
@@ -416,7 +426,6 @@
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: var(--space-2);
-  margin-top: auto;
 }
 .music-controls-side {
   display: flex;
@@ -424,7 +433,7 @@
   gap: 2px;
   min-width: 0;
 }
-.music-controls-side.is-right { justify-self: end; }
+.music-controls-side.is-right { justify-self: end; min-width: 0; }
 
 .music-mode {
   width: 34px;
@@ -481,13 +490,13 @@
 .music-ctl:hover { color: var(--text-main); background: var(--chip-bg); }
 
 .music-ctl-main {
-  width: 56px;
-  height: 56px;
+  width: 64px;
+  height: 64px;
   color: #fff;
   background: linear-gradient(135deg, var(--brand-1), var(--brand-2));
-  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 10px 24px rgba(99, 102, 241, 0.42);
 }
-.music-ctl-main svg { width: 22px; height: 22px; }
+.music-ctl-main svg { width: 24px; height: 24px; }
 .music-ctl-main:hover {
   color: #fff;
   background: linear-gradient(135deg, var(--brand-1), var(--brand-2));
@@ -501,6 +510,9 @@
   align-items: center;
   gap: 6px;
   margin-left: 6px;
+  flex: 1 1 52px;        /* 滑杆区可伸缩,窄卡不挤掉「下一首」 */
+  max-width: 130px;
+  min-width: 0;
   color: var(--text-sub);
 }
 .music-vol svg {
@@ -515,7 +527,9 @@
 }
 .music-vol svg .is-fill { fill: currentColor; stroke: none; }
 .music-vol-range {
-  width: 86px;
+  width: 100%;
+  min-width: 48px;
+  max-width: 86px;
   accent-color: var(--accent);
   cursor: pointer;
 }
@@ -577,14 +591,16 @@
   line-height: 1.9;
   cursor: pointer;
   opacity: 0.55;
-  transition: color 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
+  transition: color 0.2s ease, transform 0.2s ease, opacity 0.2s ease, background 0.2s ease;
 }
 .music-lrc-line:hover { color: var(--text-main); opacity: 0.85; }
 .music-lrc-line.active {
   color: var(--accent-text);
   font-weight: 800;
-  transform: scale(1.12);
+  transform: scale(1.08);
   opacity: 1;
+  background: var(--accent-soft);
+  padding: 4px 18px;
 }
 .music-lrc-none {
   margin: auto;
@@ -703,7 +719,7 @@
 
 @media (max-width: 900px) {
   .music-stage { grid-template-columns: 1fr; }
-  .music-card-vinyl { max-width: 420px; width: 100%; margin: 0 auto; }
+  .music-card-vinyl { max-width: 480px; width: 100%; margin: 0 auto; }
   .music-vol { display: none; }
   .music-lyrics { height: min(48vh, 380px); }
 }

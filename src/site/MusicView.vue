@@ -130,13 +130,15 @@ const MODE_PATHS: Record<PlayMode, string> = {
 
           <p v-if="player.error.value" class="music-error" role="alert">{{ player.error.value }}</p>
 
-          <!-- 进度 -->
+          <!-- 进度:条在上,时间在条下两端(参考图样式) -->
           <div class="music-progress">
-            <span class="music-time">{{ fmtTime(player.currentTime.value) }}</span>
             <button class="music-trackbar" type="button" aria-label="播放进度" @click="onSeek">
               <span class="music-trackbar-fill" :style="{ width: progressPct + '%' }"></span>
             </button>
-            <span class="music-time">{{ fmtTime(player.duration.value) }}</span>
+            <div class="music-times">
+              <span class="music-time">{{ fmtTime(player.currentTime.value) }}</span>
+              <span class="music-time">{{ fmtTime(player.duration.value) }}</span>
+            </div>
           </div>
 
           <!-- 控制:模式 / 上一首 / 大播放 / 下一首 / 音量 -->
