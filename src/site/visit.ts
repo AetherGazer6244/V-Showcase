@@ -20,7 +20,7 @@ export interface VisitTotals {
 
 const state = { totals: ref<VisitTotals | null>(null) };
 
-/** 每次页面加载只记一次(单例防重复) */
+/** 每次页面加载只记一次(单例防重复;SPA 切页走 trackView 不受此限) */
 let tracked = false;
 
 function toCount(v: unknown): number {
@@ -41,9 +41,7 @@ function sanitize(raw: unknown): VisitTotals | null {
 
 export function useVisit() {
   /** 记一次访问并接收最新累计(同一请求,无需单独 GET) */
-  async function track(): Promise<void> {
-    if (tracked) return;
-    tracked = true;
+  async function post(): Promise<void> {
     try {
       const res = await fetch('/api/visit', { method: 'POST', keepalive: true });
       const json = await res.json();
@@ -55,5 +53,17 @@ export function useVisit() {
     }
   }
 
-  return { totals: state.totals, track };
+  /** 页面加载时记一次(单例防重复) */
+  async function track(): Promise<void> {
+    if (tracked) return;
+    tracked = true;
+    await post();
+  }
+
+  /** SPA 站内切页补记 PV:每次导航都算一次,与旧整页加载语义一致 */
+  async function trackView(): Promise<void> {
+    await post();
+  }
+
+  return { totals: state.totals, track, trackView };
 }

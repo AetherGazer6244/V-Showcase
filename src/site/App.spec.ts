@@ -83,7 +83,7 @@ describe('App.vue 常驻层装配', () => {
     expect(app.find('.site-footer').exists()).toBe(true);
     // 页脚胶囊:logo 回主页钮 + 关于入口 + GitHub
     expect(app.find('.dock-home').exists()).toBe(true);
-    expect(app.find('.dock-home').attributes('href')).toBe('index.html');
+    expect(app.find('.dock-home').attributes('href')).toBe('/');
     expect(app.findAll('.footer-link').some((a) => a.text() === '关于')).toBe(true);
   });
 

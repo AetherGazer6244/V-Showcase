@@ -115,7 +115,7 @@ watch(() => post.value?.slug, () => setupTocObserver());
 
         <div class="post-card-body">
           <nav class="post-breadcrumb" aria-label="面包屑">
-            <a href="blog.html">← 博客</a>
+            <a href="/blog.html">← 博客</a>
           </nav>
           <h1 class="post-title">{{ post.title }}</h1>
 

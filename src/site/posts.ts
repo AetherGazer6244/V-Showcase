@@ -74,7 +74,9 @@ export function formatDateCN(iso: string): string {
   return `${m[1]} 年 ${Number(m[2])} 月 ${Number(m[3])} 日`;
 }
 
-/** 文章链接:开发模式走查询参数壳(post.html?slug=),生产走 /posts/<slug>/ 静态页 */
+/** 文章链接:开发模式走查询参数壳,生产走 /posts/<slug>/ 静态页。
+ *  根绝对路径(勿回退):文章页自身在 /posts/<slug>/ 目录下,
+ *  相对路径会被解析进子目录(上一篇/下一篇 404,2026-11 修复) */
 export function postHref(slug: string): string {
-  return import.meta.env.DEV ? `post.html?slug=${encodeURIComponent(slug)}` : `posts/${slug}/`;
+  return import.meta.env.DEV ? `/post.html?slug=${encodeURIComponent(slug)}` : `/posts/${slug}/`;
 }
