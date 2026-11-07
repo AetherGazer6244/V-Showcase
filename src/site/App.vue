@@ -109,6 +109,9 @@ onMounted(() => {
       <span class="footer-dot" aria-hidden="true">·</span>
       <!-- 「关于」入口只在底部胶囊区(顶栏不含) -->
       <a class="footer-link" :class="{ active: view === 'about' }" href="about.html">关于</a>
+      <!-- 退出登录:清会话 cookie → 回登录页(密码登录 v2.9.0,公共电脑必备) -->
+      <span class="footer-dot" aria-hidden="true">·</span>
+      <a class="footer-link" href="/api/logout" title="退出登录">退出</a>
       <template v-if="visit.totals.value">
         <span class="footer-dot" aria-hidden="true">·</span>
         <span class="footer-stats">
