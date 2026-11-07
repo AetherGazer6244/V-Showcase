@@ -2,8 +2,8 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import {
   useSettings, resetSettings,
-  ROWS_RANGE, WIDTH_RANGE, SPEED_RANGE,
-  IDLE_CHOICES, INTERVAL_CHOICES, ROTATE_CHOICES,
+  ROWS_RANGE, WIDTH_RANGE, SPEED_RANGE, ROTATE_RANGE,
+  SAVER_IDLE_RANGE, SAVER_INTERVAL_RANGE,
   READING_FONT_CHOICES, READING_LINE_CHOICES, READING_WIDTH_CHOICES,
   READING_FONT_LABEL, READING_LINE_LABEL, READING_WIDTH_LABEL,
 } from './settings';
@@ -260,17 +260,17 @@ onUnmounted(() => {
       </div>
 
       <div class="setting-row">
-        <span class="setting-label" id="set-rotate-sec-label">轮换间隔</span>
-        <div class="view-switch wrap" role="group" aria-labelledby="set-rotate-sec-label">
-          <button
-            v-for="s in ROTATE_CHOICES"
-            :key="s"
-            type="button"
-            :class="{ active: settings.rotateSec === s }"
-            :disabled="!settings.autoRotate"
-            @click="settings.rotateSec = s"
-          >{{ s }} 秒</button>
-        </div>
+        <label class="setting-label" for="set-rotate-sec">轮换间隔</label>
+        <input
+          id="set-rotate-sec"
+          v-model.number="settings.rotateSec"
+          type="range"
+          :min="ROTATE_RANGE.min"
+          :max="ROTATE_RANGE.max"
+          step="5"
+          :disabled="!settings.autoRotate"
+          :style="{ '--pct': pctOf(settings.rotateSec, ROTATE_RANGE) }"
+        >
         <output class="setting-value">
           {{ settings.autoRotate ? settings.rotateSec + ' 秒' : '关' }}
         </output>
@@ -392,36 +392,32 @@ onUnmounted(() => {
       </div>
 
       <div class="setting-row">
-        <span class="setting-label" id="set-saver-idle-label">闲置自动进入</span>
-        <div class="saver-controls">
-          <div class="view-switch wrap" role="group" aria-labelledby="set-saver-idle-label">
-            <button
-              v-for="m in IDLE_CHOICES"
-              :key="m"
-              type="button"
-              :class="{ active: settings.screensaver.idleMin === m }"
-              @click="settings.screensaver.idleMin = m"
-            >{{ m === 0 ? '关' : m + ' 分' }}</button>
-          </div>
-        </div>
+        <label class="setting-label" for="set-saver-idle">闲置自动进入</label>
+        <input
+          id="set-saver-idle"
+          v-model.number="settings.screensaver.idleMin"
+          type="range"
+          :min="SAVER_IDLE_RANGE.min"
+          :max="SAVER_IDLE_RANGE.max"
+          step="1"
+          :style="{ '--pct': pctOf(settings.screensaver.idleMin, SAVER_IDLE_RANGE) }"
+        >
         <output class="setting-value">
           {{ settings.screensaver.idleMin === 0 ? '关' : settings.screensaver.idleMin + ' 分' }}
         </output>
       </div>
 
       <div class="setting-row">
-        <span class="setting-label" id="set-saver-interval-label">换图间隔</span>
-        <div class="saver-controls">
-          <div class="view-switch wrap" role="group" aria-labelledby="set-saver-interval-label">
-            <button
-              v-for="s in INTERVAL_CHOICES"
-              :key="s"
-              type="button"
-              :class="{ active: settings.screensaver.intervalSec === s }"
-              @click="settings.screensaver.intervalSec = s"
-            >{{ s }} 秒</button>
-          </div>
-        </div>
+        <label class="setting-label" for="set-saver-interval">换图间隔</label>
+        <input
+          id="set-saver-interval"
+          v-model.number="settings.screensaver.intervalSec"
+          type="range"
+          :min="SAVER_INTERVAL_RANGE.min"
+          :max="SAVER_INTERVAL_RANGE.max"
+          step="1"
+          :style="{ '--pct': pctOf(settings.screensaver.intervalSec, SAVER_INTERVAL_RANGE) }"
+        >
         <output class="setting-value">{{ settings.screensaver.intervalSec }} 秒</output>
       </div>
 

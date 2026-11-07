@@ -64,6 +64,11 @@
 }
 .setting-row + .setting-row { border-top: 1px solid var(--glass-border); }
 
+/* 分段控件:收缩为内容宽并左对齐。
+ * 网格子项默认 justify-self:stretch,会把胶囊容器拉满整格,
+ * 而按钮是自然宽度 → 右侧留出一大片空白(滑杆行不受影响)。 */
+.setting-row .view-switch { justify-self: start; }
+
 .setting-label {
   font-weight: 600;
   color: var(--text-main);
@@ -123,6 +128,14 @@
 .setting-row input[type='range']:focus-visible {
   outline: 2px solid var(--brand-deep);
   outline-offset: 2px;
+}
+/* 禁用态(跟随上级开关,如「内容轮换」关):降透明度 + 禁用指针与辉光 */
+.setting-row input[type='range']:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.setting-row input[type='range']:disabled::-webkit-slider-thumb {
+  box-shadow: none;
 }
 /* Firefox:track + progress 两段拼接同款观感 */
 .setting-row input[type='range']::-moz-range-track {
@@ -413,10 +426,6 @@
   padding: 4px 0 18px;
 }
 
-/* 分段按钮(设置页屏保行的多选项):允许换行,避免窄屏溢出 */
-.view-switch.wrap { flex-wrap: wrap; border-radius: 18px; }
-.view-switch.wrap button { flex: 0 0 auto; }
-
 /* 窄屏:行内三列收窄,分组头图标缩小 */
 @media (max-width: 560px) {
   .settings-main { padding: 0 20px 64px; }
@@ -424,4 +433,7 @@
   .setting-row { grid-template-columns: 108px 1fr 84px; gap: 12px; }
   .group-icon { width: 32px; height: 32px; font-size: 1rem; border-radius: 10px; }
   .favs-actions { flex-direction: column; gap: 6px; }
+  /* 窄屏分段控件铺满整格并均分:按钮多于格宽时不再溢出压到右侧值芯片 */
+  .setting-row .view-switch { width: 100%; }
+  .setting-row .view-switch button { flex: 1 1 0; min-width: 0; padding: 7px 10px; }
 }

@@ -140,17 +140,45 @@ describe('SettingsView 屏保', () => {
     wrapper.unmount();
   });
 
-  it('闲置分段按钮写回 settings 并持久化', async () => {
+  it('闲置滑杆写回 settings 并持久化', async () => {
     const wrapper = await mountView();
-    const idleGroup = wrapper.find('[aria-labelledby="set-saver-idle-label"]');
-    const fiveMin = idleGroup.findAll('button').find((b) => b.text() === '5 分')!;
-    await fiveMin.trigger('click');
+    const idle = wrapper.find('#set-saver-idle');
+    expect(idle.exists()).toBe(true);
+    expect(idle.attributes('min')).toBe('0');
+    expect(idle.attributes('max')).toBe('30');
+    await idle.setValue('5');
     await nextTick();
     flushSettingsSave(); // 持久化有 250ms 防抖,测试里直接冲刷
 
     const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
     expect(saved.screensaver.idleMin).toBe(5);
-    expect(fiveMin.classes()).toContain('active');
+    wrapper.unmount();
+  });
+
+  it('换图间隔滑杆:范围 3–120 秒,可任意自定义', async () => {
+    const wrapper = await mountView();
+    const interval = wrapper.find('#set-saver-interval');
+    expect(interval.exists()).toBe(true);
+    expect(interval.attributes('min')).toBe('3');
+    expect(interval.attributes('max')).toBe('120');
+    await interval.setValue('42');
+    await nextTick();
+    flushSettingsSave();
+    expect(JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}').screensaver.intervalSec).toBe(42);
+    wrapper.unmount();
+  });
+
+  it('轮换间隔滑杆:范围 15–180 秒,跟随「内容轮换」开关禁用', async () => {
+    const wrapper = await mountView();
+    const rot = wrapper.find('#set-rotate-sec');
+    expect(rot.exists()).toBe(true);
+    expect(rot.attributes('min')).toBe('15');
+    expect(rot.attributes('max')).toBe('180');
+    expect(rot.attributes('disabled')).toBeUndefined();
+
+    await wrapper.find('[aria-labelledby="set-rotate-label"]').trigger('click');
+    await nextTick();
+    expect(wrapper.find('#set-rotate-sec').attributes('disabled')).toBeDefined();
     wrapper.unmount();
   });
 
