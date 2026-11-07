@@ -6,26 +6,63 @@
  * ============================================================ */
 
 :root {
+  /* ---- 底色 / 面板 ---- */
   --bg-start: #101218;
   --bg-end:   #171a21;
   --panel:    #1d2129;
+
+  /* ---- 文字 ---- */
   --text:     #e8eaf0;
   --text-sub: #98a1b3;
+  --text-dim: #7f8798;          /* meta / 占位符(对深底对比度 ≈4.4:1) */
+
+  /* ---- 边框 / 玻璃 ---- */
   --border:   rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.18);
   --glass:    rgba(255, 255, 255, 0.055);
   --glass-strong: rgba(255, 255, 255, 0.10);
   --blur: blur(18px) saturate(1.25);
+
+  /* ---- 品牌靛蓝 ---- */
   --primary:  #6366f1;
   --primary-2: #818cf8;
   --primary-deep: #4f46e5;
   --grad: linear-gradient(135deg, var(--primary), var(--primary-2));
-  --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.38);
-  --card-radius: 18px;
-  --radius: 14px;
-  --radius-sm: 10px;
+  --accent:     var(--primary);            /* 语义高亮:边框 / 底色 / 渐变端 */
+  --accent-dim: rgba(99, 102, 241, 0.20);  /* 选中态底色 */
+  --accent-text: #a5b4fc;                  /* 深底上的靛蓝文字(≈8:1) */
+  --hover-glow: 0 12px 30px rgba(99, 102, 241, 0.26);
+  --focus-ring: 0 0 0 3px rgba(99, 102, 241, 0.18);
+
+  /* ---- 语义色 ---- */
   --ok:  #3ddc97;
   --warn: #ffc86b;
   --danger: #ff8a80;
+  --ok-dim:     rgba(61, 220, 151, 0.14);
+  --warn-dim:   rgba(255, 200, 107, 0.14);
+  --danger-dim: rgba(255, 138, 128, 0.14);
+
+  /* ---- 阴影 / 圆角 ---- */
+  --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.38);
+  --pop-shadow:  0 18px 48px rgba(0, 0, 0, 0.45);
+  --card-radius: 18px;
+  --radius: 14px;
+  --radius-sm: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 999px;
+
+  /* ---- 字号阶梯(对齐站点 base.css) ---- */
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.8125rem;
+  --fs-md: 0.9375rem;
+  --fs-lg: 1.125rem;
+  --fs-xl: 1.375rem;
+
+  /* ---- 芯片 / mono ---- */
+  --chip-bg: rgba(255, 255, 255, 0.10);
+  --chip-bg-hover: rgba(255, 255, 255, 0.18);
+  --chip-border: rgba(255, 255, 255, 0.12);
   --mono: "SF Mono", Menlo, Consolas, monospace;
 }
 
@@ -1116,7 +1153,7 @@ html, body {
   font: inherit;
   font-size: 12px;
 }
-.toggle.on { color: var(--accent); border-color: var(--accent); font-weight: 700; }
+.toggle.on { color: var(--accent-text); border-color: var(--accent); font-weight: 700; }
 
 .blogtab, .musictab, .projecttab {
   display: flex;
@@ -1134,7 +1171,7 @@ html, body {
   text-align: center;
 }
 .mt-dirty, .pt-dirty, .bt-dirty {
-  color: var(--accent);
+  color: var(--accent-text);
   font-size: 12px;
   margin: 0;
 }
@@ -1169,7 +1206,7 @@ html, body {
   font: inherit;
   font-size: 12px;
 }
-.seg button.on { background: var(--accent-dim, rgba(245, 158, 11, 0.14)); color: var(--accent); font-weight: 700; }
+.seg button.on { background: var(--accent-dim); color: var(--accent-text); font-weight: 700; }
 .bt-new { display: flex; gap: 6px; }
 .bt-new .input { flex: 1; }
 .bt-list {
@@ -1203,7 +1240,7 @@ html, body {
 .bt-draft {
   margin-left: 6px;
   font-size: 10px;
-  color: var(--accent);
+  color: var(--accent-text);
   border: 1px solid var(--accent);
   border-radius: 4px;
   padding: 0 4px;
