@@ -184,6 +184,7 @@ html, body {
   font-family: var(--mono);
   font-size: 0.72rem;
   padding: 6px 8px;
+  min-height: 30px;
   margin-bottom: 8px;
 }
 .preview-links { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
@@ -283,21 +284,25 @@ html, body {
   background: var(--glass-strong);
 }
 
-/* ─── 按钮 ───────────────────────────── */
+/* ─── 按钮(三态:主=渐变 / 次=玻璃 / ghost=纯文字) ───────────── */
 .btn {
-  padding: 9px 16px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 36px;
+  padding: 0 16px;
   border: 1px solid var(--border);
   background: var(--glass);
   color: var(--text);
   font-size: 0.86rem;
   font-family: inherit;
-  border-radius: 12px;
+  border-radius: 10px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease,
+              box-shadow 0.15s ease, transform 0.12s ease;
 }
 .btn:hover {
   background: var(--glass-strong);
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: var(--border-strong);
   transform: translateY(-1px);
 }
 .btn:active { transform: scale(0.97); }
@@ -307,15 +312,19 @@ html, body {
   color: #fff;
   box-shadow: 0 4px 16px rgba(99, 102, 241, 0.32);
 }
-.btn-primary:hover { filter: brightness(1.08); background: var(--grad); }
+.btn-primary:hover {
+  background: var(--grad);
+  filter: brightness(1.08);
+  box-shadow: var(--hover-glow);
+}
 .btn-ghost {
   background: transparent; border-color: transparent;
   color: var(--text-sub);
 }
 .btn-ghost:hover { background: var(--glass); color: var(--text); border-color: transparent; }
-.btn-small { padding: 6px 11px; font-size: 0.78rem; border-radius: 9px; }
+.btn-small { height: 28px; padding: 0 11px; font-size: 0.78rem; border-radius: 8px; }
 .btn-block { width: 100%; }
-.btn-danger { color: var(--danger); border-color: rgba(255, 138, 128, 0.35); background: rgba(255, 99, 71, 0.08); }
+.btn-danger { color: var(--danger); border-color: rgba(255, 138, 128, 0.35); background: var(--danger-dim); }
 .btn-danger:hover { background: rgba(255, 99, 71, 0.16); border-color: var(--danger); }
 .btn-danger-solid {
   background: linear-gradient(135deg, #e5484d, #c9184a);
@@ -625,7 +634,7 @@ html, body {
   font-family: inherit; font-size: 0.85rem;
   text-align: center;
 }
-.ctrl-field input:focus { outline: none; border-color: var(--primary); }
+.ctrl-field input:focus { outline: none; border-color: var(--accent); box-shadow: var(--focus-ring); }
 .ctrl-preview-label { font-size: 0.85rem; color: var(--text-sub); }
 .ctrl-preview {
   width: 120px; height: var(--h, 80px);
@@ -665,7 +674,7 @@ html, body {
   font-size: 0.78rem;
   resize: vertical;
 }
-.export-text:focus { outline: none; border-color: var(--primary); }
+.export-text:focus { outline: none; border-color: var(--accent); box-shadow: var(--focus-ring); }
 .ai-log {
   width: 100%; min-height: 240px;
   padding: 12px;
@@ -818,7 +827,7 @@ html, body {
   font-size: 0.85rem;
   font-family: inherit;
 }
-.album-search:focus { outline: none; border-color: var(--primary); }
+.album-search:focus { outline: none; border-color: var(--accent); box-shadow: var(--focus-ring); }
 .album-count {
   font-family: var(--mono);
   font-size: 0.78rem;
@@ -945,7 +954,7 @@ html, body {
   font-size: 0.95rem;
   font-family: inherit;
 }
-.album-edit-input:focus { outline: none; border-color: var(--primary); }
+.album-edit-input:focus { outline: none; border-color: var(--accent); box-shadow: var(--focus-ring); }
 
 /* ─── 上传工作台(悬浮面板,UploadBoard.vue) ─── */
 .upload-board {
@@ -1102,7 +1111,7 @@ html, body {
   font-size: 0.76rem;
   font-family: inherit;
 }
-.tag-input:focus { outline: none; border-color: var(--primary); }
+.tag-input:focus { outline: none; border-color: var(--accent); box-shadow: var(--focus-ring); }
 .tag-input::placeholder { color: var(--text-sub); }
 
 /* ─── 配置 Tab ───────────────────────────── */
@@ -1153,7 +1162,7 @@ html, body {
   font-size: 0.88rem;
   font-family: inherit;
 }
-.config-row input:focus { outline: none; border-color: var(--primary); }
+.config-row input:focus { outline: none; border-color: var(--accent); box-shadow: var(--focus-ring); }
 
 .config-hint { color: var(--text-sub); font-size: 0.76rem; }
 
@@ -1216,12 +1225,19 @@ html, body {
   border: 1px solid var(--border);
   border-radius: 8px;
   color: var(--text);
-  padding: 7px 10px;
+  padding: 8px 10px;
+  min-height: 36px;      /* 与 .btn 同高;textarea(rows>1) 仍可撑高 */
   font: inherit;
   font-size: 13px;
   min-width: 0;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 }
-.input:focus { outline: none; border-color: var(--accent); }
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--glass-strong);
+  box-shadow: var(--focus-ring);
+}
 .input::placeholder { color: var(--text-dim); }
 
 .icon-btn {
@@ -1242,17 +1258,52 @@ html, body {
 .icon-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .icon-btn-danger:hover { color: #e5484d; border-color: #e5484d; }
 
+/* 真开关:34×18 轨道 + 12px 圆点(纯 CSS,模板零结构改动) */
 .toggle {
-  background: var(--glass);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text-dim);
-  padding: 6px 14px;
+  position: relative;
+  width: 34px; height: 18px;
+  flex: none;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.07);
   cursor: pointer;
-  font: inherit;
-  font-size: 12px;
+  font-size: 0;          /* 隐藏「是/否」文本(可访问名由 aria-label 提供) */
+  line-height: 0;
+  overflow: hidden;
+  transition: background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
-.toggle.on { color: var(--accent-text); border-color: var(--accent); font-weight: 700; }
+.toggle::before {
+  content: '';
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: #8b93a4;
+  transition: transform 0.18s cubic-bezier(0.3, 1.4, 0.5, 1), background 0.18s ease;
+}
+.toggle:hover { border-color: rgba(99, 102, 241, 0.45); }
+.toggle.on {
+  background: var(--grad);
+  border-color: transparent;
+  box-shadow: 0 2px 10px rgba(99, 102, 241, 0.35);
+}
+.toggle.on::before { transform: translateX(15px); background: #fff; }
+
+/* mono 玻璃芯片(数字等宽对齐,对齐站点 .setting-value) */
+.chip {
+  display: inline-flex; align-items: center;
+  padding: 2px 9px;
+  border-radius: var(--radius-full);
+  background: var(--chip-bg);
+  border: 1px solid var(--chip-border);
+  color: var(--text-sub);
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
 
 .blogtab, .musictab, .projecttab {
   display: flex;
@@ -1290,22 +1341,32 @@ html, body {
 .bt-side-head { display: flex; align-items: center; }
 .seg {
   display: inline-flex;
+  gap: 2px;
+  padding: 3px;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--glass);
   width: 100%;
 }
 .seg button {
   flex: 1;
   background: none;
   border: 0;
-  color: var(--text-dim);
-  padding: 7px 0;
+  border-radius: var(--radius-full);
+  color: var(--text-sub);
+  padding: 6px 0;
   cursor: pointer;
   font: inherit;
   font-size: 12px;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
-.seg button.on { background: var(--accent-dim); color: var(--accent-text); font-weight: 700; }
+.seg button:hover { color: var(--text); }
+.seg button.on {
+  background: var(--grad);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.30);
+}
 .bt-new { display: flex; gap: 6px; }
 .bt-new .input { flex: 1; }
 .bt-list {
@@ -1384,6 +1445,13 @@ html, body {
   font-family: ui-monospace, Consolas, monospace;
   font-size: 13px;
   line-height: 1.7;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.bt-body:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--glass-strong);
+  box-shadow: var(--focus-ring);
 }
 .bt-body:focus { outline: none; border-color: var(--accent); }
 

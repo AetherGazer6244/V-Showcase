@@ -228,7 +228,14 @@ async function onSaveDeploy() {
         </label>
         <label class="bt-field">
           <span>草稿</span>
-          <button type="button" class="toggle" :class="{ on: fDraft }" @click="fDraft = !fDraft; markDirty()">
+          <button
+            type="button"
+            class="toggle"
+            :class="{ on: fDraft }"
+            :aria-pressed="fDraft"
+            aria-label="草稿"
+            @click="fDraft = !fDraft; markDirty()"
+          >
             {{ fDraft ? '是' : '否' }}
           </button>
         </label>
