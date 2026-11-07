@@ -1,6 +1,6 @@
 {
   "name": "v-showcase",
-  "version": "2.9.1",
+  "version": "2.9.2",
   "description": "V-Showcase — 流动图片墙 + 光影画廊 (Vue 3 + Vite + TS)",
   "private": true,
   "scripts": {
