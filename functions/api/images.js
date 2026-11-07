@@ -88,7 +88,7 @@ export async function onRequest(context) {
     // 首页面可能是「网络层失败」(无 Response,只有 err),也可能是「上游返回了错误状态」
     if (!first.ok) {
       if (!first.res) return networkError(first.err);
-      return upstreamError(first.res);
+      return upstreamError(first.res, first.bodyText);
     }
     const firstJson = await first.res.json();
     const innerData = (firstJson && firstJson.data) || {};
@@ -153,14 +153,18 @@ function pageUrl(page) {
 }
 
 /** 单页拉取,带超时。失败一律 resolve 成 {ok:false} 而不是抛出。
- *  @returns {Promise<{ok: true, res: Response} | {ok: false, res?: Response, err?: unknown}>} */
+ *  非 2xx 时把错误正文留在 bodyText:上游 JSON 错误(如 401)要原样透传,
+ *  而 res.body 已被消费——复用它会抛「ReadableStream is disturbed」,
+ *  把真实错误吞成迷惑性 502(2026-11 生产实测,勿回退)。
+ *  @returns {Promise<{ok: true, res: Response} | {ok: false, res?: Response, bodyText?: string, err?: unknown}>} */
 async function fetchPage(page, headers) {
   try {
     const res = await fetch(pageUrl(page), { headers, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
-    // 非 2xx 要把 body 消费掉,否则连接不释放
+    // 非 2xx 也要把 body 消费掉,否则连接不释放;内容存 bodyText 供透传
     if (!res.ok) {
-      try { await res.arrayBuffer(); } catch { /* 已读或已断 */ }
-      return { ok: false, res };
+      let bodyText = '';
+      try { bodyText = await res.text(); } catch { /* 已读或已断 */ }
+      return { ok: false, res, bodyText };
     }
     return { ok: true, res };
   } catch (err) {
@@ -176,8 +180,9 @@ function networkError(err) {
   return json(502, { status: false, message: msg, data: {} });
 }
 
-/** 上游错误响应:非 JSON(HTML 错误页 / CDN 拦截)必须包装,否则前端解析失败 */
-function upstreamError(res) {
+/** 上游错误响应:非 JSON(HTML 错误页 / CDN 拦截)必须包装,否则前端解析失败。
+ *  JSON 错误用 fetchPage 保留的 bodyText 重建(res.body 已消费,不可复用) */
+function upstreamError(res, bodyText) {
   const ct = res.headers.get('content-type') || '';
   if (!ct.toLowerCase().includes('application/json')) {
     return json(res.status, {
@@ -186,7 +191,7 @@ function upstreamError(res) {
       data: {},
     });
   }
-  return new Response(res.body, { status: res.status, headers: { 'Content-Type': 'application/json; charset=utf-8' } });
+  return new Response(bodyText || '', { status: res.status, headers: { 'Content-Type': 'application/json; charset=utf-8' } });
 }
 
 /** 分块并发:Workers 硬上限 6 条并发外连,超出部分排队 */
