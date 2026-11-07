@@ -14,4 +14,4 @@ pages_build_output_dir = "./dist"
 [[d1_databases]]
 binding = "DB"
 database_name = "v-showcase-db"
-database_id = "c5963de3-20fd-439b-8f8b-86a5d3d4ca47"
+database_id = "ee58e652-a085-4c15-99be-1d57b80596f0"
