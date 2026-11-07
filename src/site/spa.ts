@@ -6,7 +6,7 @@
  * 这里把前台内链点击升级为 fetch + 就地换视图:
  *   - player.ts 的 audio 单例在同一段 JS 世界里永不销毁 → 音乐真连续
  *   - URL 用 pushState 保持真实地址(可刷新/分享/前进后退)
- *   - 各视图仍是懒加载异步组件,换视图按需拉 chunk,与整页加载同构
+ *   - 鼠标悬停/键盘聚焦时先取目标 HTML,点击时直接用预取结果
  *
  * 拦截范围(窄白名单,宁缺毋滥,改动前都有问题勿回退):
  *   1. 只拦前台 8 视图(.html 与美化路径两种形态)+ /posts/<slug>/
@@ -137,6 +137,92 @@ let seq = 0;                 // 并发导航令牌:连点时只认最后一次
 let onNavigateCb: (() => void) | null = null;
 /** URL(pathname+search) → 已见过的 title/description,popstate 恢复标题用 */
 const metaCache = new Map<string, PageMeta>();
+/** 鼠标悬停/键盘聚焦预取的页面 HTML;短 TTL 避免长时间使用旧内容 */
+const PREFETCH_TTL_MS = 30_000;
+const PREFETCH_MAX_ENTRIES = 8;
+interface PageResponse {
+  url: URL;
+  html: string;
+}
+const pageCache = new Map<string, { at: number; promise: Promise<PageResponse | null> }>();
+
+function pageKey(href: string): string {
+  return new URL(href, window.location.href).href;
+}
+
+/** HTML 请求 single-flight:预取与点击共用同一请求 */
+function loadPage(href: string): Promise<PageResponse | null> {
+  const key = pageKey(href);
+  const cached = pageCache.get(key);
+  if (cached && Date.now() - cached.at < PREFETCH_TTL_MS) return cached.promise;
+  if (cached) pageCache.delete(key);
+
+  const entry: { at: number; promise: Promise<PageResponse | null> } = {
+    at: Date.now(),
+    promise: Promise.resolve(null),
+  };
+  entry.promise = fetch(key, { headers: { Accept: 'text/html' } })
+    .then(async (res) => {
+      if (!res.ok) return null;
+      return { url: new URL(res.url, window.location.href), html: await res.text() };
+    })
+    .catch((err: unknown) => {
+      if (pageCache.get(key) === entry) pageCache.delete(key);
+      throw err;
+    });
+  pageCache.set(key, entry);
+  while (pageCache.size > PREFETCH_MAX_ENTRIES) {
+    const oldest = pageCache.keys().next().value as string | undefined;
+    if (!oldest) break;
+    pageCache.delete(oldest);
+  }
+  return entry.promise;
+}
+
+function prefetchFromTarget(target: EventTarget | null): void {
+  const a = (target as Element | null)?.closest?.('a[href]') as HTMLAnchorElement | null;
+  if (!a || (a.target && a.target !== '_self') || a.hasAttribute('download') || /\bexternal\b/i.test(a.rel)) return;
+  const href = a.getAttribute('href') || '';
+  if (!href || href.startsWith('#')) return;
+  if (!routeFromUrl(a.href, window.location.href)) return;
+  const dest = new URL(a.href);
+  const here = new URL(window.location.href);
+  if (dest.pathname === here.pathname && dest.search === here.search) return;
+  // 预取失败不影响正常点击;届时 go() 会走完整页兜底。
+  void loadPage(a.href).catch(() => undefined);
+}
+
+function onPointerOver(e: PointerEvent): void {
+  // 触屏通常没有悬停;即便浏览器模拟 pointerover,预取也是低风险 GET。
+  prefetchFromTarget(e.target);
+}
+
+function onFocusIn(e: FocusEvent): void {
+  prefetchFromTarget(e.target);
+}
+
+/** 首屏稳定后预热视图代码;用户第一次点击时免等分包下载 */
+function warmViewChunks(): void {
+  const loaders = [
+    () => import('./HomeView.vue'),
+    () => import('./BlogView.vue'),
+    () => import('./PostView.vue'),
+    () => import('./GalleryView.vue'),
+    () => import('./MusicView.vue'),
+    () => import('./ProjectsView.vue'),
+    () => import('./AboutView.vue'),
+    () => import('./SettingsView.vue'),
+  ];
+  loaders.forEach((load) => { void load().catch(() => undefined); });
+}
+
+function scheduleChunkWarmup(): void {
+  if ('requestIdleCallback' in window) {
+    window.requestIdleCallback(warmViewChunks, { timeout: 2000 });
+  } else {
+    globalThis.setTimeout(warmViewChunks, 1500);
+  }
+}
 
 function onClick(e: MouseEvent): void {
   if (!willIntercept(e)) return;
@@ -153,25 +239,25 @@ async function go(href: string): Promise<void> {
     history.replaceState({ ...(history.state as Record<string, unknown> | null), spaScroll: window.scrollY }, '');
   } catch { /* 状态序列化失败无碍 */ }
 
-  let res: Response;
+  let page: PageResponse | null;
   try {
-    res = await fetch(href, { headers: { Accept: 'text/html' } });
+    page = await loadPage(href);
   } catch {
+    if (token !== seq) return;
     window.location.href = href;   // 断网/CSP 拦截 → 整页照旧
     return;
   }
-  if (!res.ok) {
+  if (token !== seq) return;
+  if (!page) {
     window.location.href = href;   // 404 等 → 让服务端呈现错误页
     return;
   }
-  const url = new URL(res.url, window.location.href);
+  const { url, html } = page;
   const route = routeFromUrl(url.href, window.location.href);
   if (!route) {
     window.location.href = url.href;   // 重定向出了白名单 → 整页
     return;
   }
-  const html = await res.text();
-  if (token !== seq) return;           // 过期结果丢弃(用户连点,最后一次自己会完成)
   if (!/window\.__VIEW__/.test(html)) {
     // 没有 __VIEW__ 标记 = 登录页/锁定页(会话过期/站点锁定):
     // 整页跳转让中间件的完整页面正常呈现,绝不能吞成数据
@@ -229,5 +315,8 @@ export function initSpaNav(onNavigate?: () => void): void {
     { title: document.title, description: document.querySelector('meta[name="description"]')?.getAttribute('content') || undefined },
   );
   document.addEventListener('click', onClick);
+  document.addEventListener('pointerover', onPointerOver, { passive: true });
+  document.addEventListener('focusin', onFocusIn);
   window.addEventListener('popstate', onPop);
+  scheduleChunkWarmup();
 }

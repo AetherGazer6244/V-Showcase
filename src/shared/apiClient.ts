@@ -93,15 +93,19 @@ function buildDirectHeaders(): Record<string, string> {
 /** loadImages 的返回(永不 reject;失败已静默回退兜底图) */
 type LoadResult = { images: Image[] };
 
-/** 列表内存缓存 TTL:窗口内 SPA 换页/开屏保复用同一份名单,不重复回源 */
-const LIST_TTL_MS = 60_000;
+/** 图片名单缓存 5 分钟;过期后先显示旧名单,后台刷新,避免切页等待图床 */
+const LIST_TTL_MS = 5 * 60_000;
+/** 后台刷新失败后至少等 30 秒再重试,避免每次切页都敲上游 */
+const REFRESH_RETRY_MS = 30_000;
 let listCache: { at: number; data: LoadResult } | null = null;
 /** single-flight:TTL 过期瞬间多个组件并发调用只发一次请求 */
 let inflight: Promise<LoadResult> | null = null;
+let lastRefreshAttemptAt = 0;
 
 /**
  * 拉取图片列表。永不 reject:上游失败时静默回退兜底图(细节只进 console)。
- * 60s 内存缓存 + 并发去重;仅缓存成功且非兜底的结果(失败下次自动重试)。
+ * 5 分钟内存缓存 + 并发去重;过期时 stale-while-revalidate:立即返回旧名单,
+ * 后台刷新。只缓存成功且非兜底的结果;失败时保留旧缓存并节流后重试。
  * @returns { images }
  */
 export async function loadImages(): Promise<LoadResult> {
@@ -110,17 +114,33 @@ export async function loadImages(): Promise<LoadResult> {
     return { images: toFallbackImages(CONFIG.fallbackImages) };
   }
 
-  if (listCache && Date.now() - listCache.at < LIST_TTL_MS) {
+  if (listCache) {
+    const age = Date.now() - listCache.at;
+    if (age < LIST_TTL_MS) return listCache.data;
+
+    // 缓存过期也不让页面等网络:先交旧名单渲染,后台悄悄更新。
+    // 刷新失败保留旧名单;30 秒内不重复打上游。
+    if (Date.now() - lastRefreshAttemptAt >= REFRESH_RETRY_MS) {
+      void refreshList();
+    }
     return listCache.data;
   }
+  // 首次冷启动无旧数据可展示,正常等待第一次请求。
+  return refreshList();
+}
+
+/** single-flight 刷新;成功更新缓存,失败不覆盖已有的好数据 */
+function refreshList(): Promise<LoadResult> {
   if (!inflight) {
-    inflight = fetchList().finally(() => { inflight = null; });
+    lastRefreshAttemptAt = Date.now();
+    inflight = fetchList()
+      .then((data) => {
+        if (!isFallback(data.images)) listCache = { at: Date.now(), data };
+        return data;
+      })
+      .finally(() => { inflight = null; });
   }
-  const data = await inflight;
-  if (!isFallback(data.images)) {
-    listCache = { at: Date.now(), data };
-  }
-  return data;
+  return inflight;
 }
 
 /** 实际请求(proxy / direct 两模式 + 静默回退),不含缓存逻辑 */

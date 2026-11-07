@@ -105,16 +105,48 @@ describe('loadImages 缓存', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it('TTL 过期后重新请求', async () => {
+  it('5 分钟内复用缓存,过期后先返回旧数据并后台刷新', async () => {
     const fetchMock = vi.fn(async () => okResponse());
     vi.stubGlobal('fetch', fetchMock);
     const loadImages = await freshLoadImages();
 
+    const first = await loadImages();
+    vi.advanceTimersByTime(4 * 60_000);
     await loadImages();
-    vi.advanceTimersByTime(61_000);
-    await loadImages();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
 
+    vi.advanceTimersByTime(61_000);
+    const stale = await loadImages();
+    expect(stale).toBe(first); // 过期也先把旧名单交给页面,不等网络
+    expect(fetchMock).toHaveBeenCalledTimes(2); // 后台刷新已启动
+
+    // 后台成功后缓存更新;短暂再访问不会发第三次请求
+    await Promise.resolve();
+    await loadImages();
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('后台刷新失败时保留旧名单,并节流重试', async () => {
+    const fetchMock = vi.fn()
+      .mockImplementationOnce(async () => okResponse())
+      .mockImplementationOnce(async () => { throw new Error('refresh failed'); })
+      .mockImplementationOnce(async () => okResponse());
+    vi.stubGlobal('fetch', fetchMock);
+    const loadImages = await freshLoadImages();
+
+    const good = await loadImages();
+    vi.advanceTimersByTime(5 * 60_000 + 1);
+    const stale = await loadImages();
+    expect(stale).toBe(good);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    await Promise.resolve();
+    await loadImages();
+    expect(fetchMock).toHaveBeenCalledTimes(2); // 失败后保留旧值,30s 内不重敲上游
+
+    vi.advanceTimersByTime(30_001);
+    await loadImages();
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
   it('失败回退兜底图时不缓存,下次进入重试', async () => {
