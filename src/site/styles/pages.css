@@ -168,40 +168,98 @@
   .blog-card-excerpt { display: none; }   /* 移动端只留 pills + 标题 */
 }
 
-/* ============ 音乐页(v2.3 对齐 Cecilian-Hub:大封面 + 歌词/列表 Tab)============ */
-.music-stage {
-  display: grid;
-  grid-template-columns: minmax(240px, 320px) 1fr;
-  gap: var(--space-6);
-  align-items: start;
-}
-
-/* 左:大封面 */
-.music-cover-col {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.music-cover {
+/* ============ 音乐页(v2.8「云端乐律」双卡布局)============ */
+/* 页面容器:相对定位承载背景模糊层 */
+.music-page {
   position: relative;
-  aspect-ratio: 1 / 1;
-  border-radius: var(--radius-xl);
   overflow: hidden;
-  background: var(--img-bg);
-  box-shadow: var(--card-shadow);
-  border: 1px solid var(--glass-border);
-  transition: box-shadow 0.4s ease;
 }
-.music-cover.playing { box-shadow: var(--hover-glow); }
-.music-cover img {
+
+/* 背景模糊层:当前曲目封面 + 主题色遮罩(切歌跟随) */
+.music-bg {
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  z-index: 0;
+  pointer-events: none;
 }
-.music-cover-fallback {
+.music-bg img,
+.music-bg-grad {
+  position: absolute;
+  inset: -12%;
+  width: 124%;
+  height: 124%;
+  object-fit: cover;
+  filter: blur(64px) saturate(1.25);
+}
+.music-bg img { opacity: 0.9; }
+.music-bg-grad {
+  background: linear-gradient(135deg, var(--brand-1), var(--brand-2));
+  opacity: 0.35;
+}
+.music-bg-veil {
+  position: absolute;
+  inset: 0;
+  background: rgba(244, 246, 250, 0.72);
+}
+:root[data-theme='dark'] .music-bg-veil { background: rgba(10, 12, 18, 0.82); }
+
+/* 头部:大标题 + 副标题(压在模糊背景上,居中) */
+.music-hero {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+}
+.music-hero-meta {
+  margin-top: var(--space-2);
+  color: var(--text-sub);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.06em;
+}
+.music-page .page-header-main {
+  position: relative;
+  z-index: 1;
+}
+
+/* 双卡布局:左黑胶卡 + 右歌词/歌单卡 */
+.music-stage {
+  display: grid;
+  grid-template-columns: minmax(250px, 320px) 1fr;
+  gap: var(--space-5);
+  align-items: stretch;
+}
+.music-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: 28px;
+}
+
+/* 左卡:黑胶唱片(播放旋转 + 同心纹 + 中心孔) */
+.music-vinyl {
+  position: relative;
+  width: min(240px, 88%);
+  aspect-ratio: 1 / 1;
+  margin: 4px auto 0;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--img-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--card-shadow);
+  transition: box-shadow 0.4s ease;
+}
+.music-vinyl.spinning { box-shadow: var(--hover-glow), var(--card-shadow); }
+/* 封面 150% 覆盖:旋转时不出角 */
+.music-vinyl img {
+  position: absolute;
+  inset: -25%;
+  width: 150%;
+  height: 150%;
+  object-fit: cover;
+  animation: vinyl-spin 16s linear infinite;
+  animation-play-state: paused;
+}
+.music-vinyl.spinning img { animation-play-state: running; }
+.music-vinyl-fallback {
   position: absolute;
   inset: 0;
   display: flex;
@@ -209,8 +267,46 @@
   justify-content: center;
   font-size: 3rem;
   color: var(--accent);
-  opacity: 0.5;
+  opacity: 0.55;
   background: linear-gradient(135deg, var(--accent-soft), transparent);
+}
+/* 同心细纹(随唱片转)+ 静态玻璃高光(::after 不转) */
+.music-vinyl-grooves {
+  position: absolute;
+  inset: -25%;
+  background: repeating-radial-gradient(
+    circle at center,
+    rgba(255, 255, 255, 0.055) 0 1px,
+    transparent 1px 5px
+  );
+  animation: vinyl-spin 16s linear infinite;
+  animation-play-state: paused;
+  pointer-events: none;
+}
+.music-vinyl.spinning .music-vinyl-grooves { animation-play-state: running; }
+.music-vinyl::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.16), transparent 42%);
+  pointer-events: none;
+}
+.music-vinyl-hole {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 13%;
+  height: 13%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: var(--glass-plain);
+  border: 1px solid var(--glass-border-strong);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.25);
+}
+@keyframes vinyl-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .music-error {
@@ -229,15 +325,13 @@
   font-family: ui-monospace, Consolas, monospace;
 }
 
-/* 右:面板 */
-.music-panel {
+/* 曲目信息(居中) */
+.music-now {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  padding: 22px 24px;
+  gap: 3px;
+  text-align: center;
 }
-
-.music-now { display: flex; flex-direction: column; gap: 3px; }
 .music-now-title {
   color: var(--text-main);
   font-size: var(--fs-xl);
@@ -255,6 +349,7 @@
   white-space: nowrap;
 }
 
+/* 进度条 */
 .music-progress {
   display: flex;
   align-items: center;
@@ -315,120 +410,181 @@
 }
 .music-trackbar:hover .music-trackbar-fill::after { opacity: 1; }
 
+/* 控制行:左(模式+上一首) / 中(大播放) / 右(下一首+音量) */
 .music-controls {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: auto;
+}
+.music-controls-side {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: 2px;
+  min-width: 0;
 }
+.music-controls-side.is-right { justify-self: end; }
+
 .music-mode {
+  width: 34px;
+  height: 34px;
+  flex: none;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  border-radius: var(--radius-full);
+  justify-content: center;
+  padding: 0;
+  border-radius: 50%;
   border: 1px solid var(--glass-border);
   background: var(--chip-bg);
   color: var(--text-sub);
-  font: inherit;
-  font-size: var(--fs-xs);
   cursor: pointer;
   transition: color 0.15s ease, border-color 0.15s ease;
 }
 .music-mode:hover { color: var(--accent-text); border-color: var(--accent); }
-.music-ctl {
-  border: 0;
-  background: none;
-  color: var(--text-sub);
-  font-size: 1.15rem;
-  line-height: 1;
-  padding: 6px;
-  border-radius: 50%;
-  cursor: pointer;
-  transition: color 0.15s ease, transform 0.15s ease;
+.music-mode svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
-.music-ctl:hover { color: var(--text-main); transform: scale(1.1); }
-.music-ctl-main {
-  width: 46px;
-  height: 46px;
+
+.music-ctl {
+  width: 36px;
+  height: 36px;
+  flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 1rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--text-sub);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+.music-ctl svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.music-ctl svg .is-fill { fill: currentColor; stroke: none; }
+.music-ctl svg .is-heavy { stroke-width: 2.4; }
+.music-ctl:hover { color: var(--text-main); background: var(--chip-bg); }
+
+.music-ctl-main {
+  width: 56px;
+  height: 56px;
   color: #fff;
   background: linear-gradient(135deg, var(--brand-1), var(--brand-2));
-  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.35);
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
 }
-.music-ctl-main:hover { color: #fff; filter: brightness(1.06); }
+.music-ctl-main svg { width: 22px; height: 22px; }
+.music-ctl-main:hover {
+  color: #fff;
+  background: linear-gradient(135deg, var(--brand-1), var(--brand-2));
+  filter: brightness(1.07);
+  box-shadow: var(--hover-glow);
+}
 .music-ctl-main:active { transform: scale(0.94); }
+
 .music-vol {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-left: auto;
+  margin-left: 6px;
   color: var(--text-sub);
-  font-size: 0.9rem;
 }
+.music-vol svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.music-vol svg .is-fill { fill: currentColor; stroke: none; }
 .music-vol-range {
-  width: 92px;
+  width: 86px;
   accent-color: var(--accent);
   cursor: pointer;
 }
 
-/* Tab 行 */
+/* 右卡 Tab:居中胶囊分段(歌词 / 歌单) */
 .music-tabs {
-  display: flex;
-  gap: var(--space-4);
-  border-bottom: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  width: min(220px, 100%);
+  margin: 0 auto;
+  padding: 4px;
+  border-radius: var(--radius-full);
+  background: var(--chip-bg);
+  border: 1px solid var(--glass-border);
 }
 .music-tab {
   border: 0;
   background: none;
-  padding: 8px 2px;
-  margin-bottom: -1px;
+  padding: 7px 0;
+  border-radius: var(--radius-full);
   color: var(--text-sub);
   font: inherit;
-  font-size: var(--fs-md);
+  font-size: var(--fs-sm);
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: color 0.15s ease, border-color 0.15s ease;
+  transition: color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
 .music-tab:hover { color: var(--text-main); }
 .music-tab.on {
-  color: var(--accent-text);
-  font-weight: 800;
-  border-bottom-color: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--brand-1), var(--brand-2));
+  box-shadow: 0 3px 10px rgba(99, 102, 241, 0.32);
 }
 
-/* 歌词滚动区 */
+/* 歌词滚动区:上下边缘淡出遮罩 */
 .music-lyrics {
-  height: 280px;
+  height: min(52vh, 430px);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 12px 8px;
+  gap: 10px;
+  padding: 14px 8px;
   scroll-behavior: smooth;
+  mask-image: linear-gradient(transparent, #000 10%, #000 90%, transparent);
+  -webkit-mask-image: linear-gradient(transparent, #000 10%, #000 90%, transparent);
 }
 .music-lrc-line {
   border: 0;
   background: none;
-  padding: 2px 10px;
+  padding: 2px 12px;
   border-radius: var(--radius-full);
   color: var(--text-sub);
   font: inherit;
-  font-size: var(--fs-md);
+  font-size: var(--fs-lg);
   line-height: 1.9;
   cursor: pointer;
-  transition: color 0.2s ease, transform 0.2s ease;
+  opacity: 0.55;
+  transition: color 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
 }
-.music-lrc-line:hover { color: var(--text-main); }
+.music-lrc-line:hover { color: var(--text-main); opacity: 0.85; }
 .music-lrc-line.active {
   color: var(--accent-text);
   font-weight: 800;
-  transform: scale(1.05);
+  transform: scale(1.12);
+  opacity: 1;
 }
 .music-lrc-none {
   margin: auto;
@@ -437,7 +593,7 @@
   letter-spacing: 0.05em;
 }
 
-/* 列表 Tab */
+/* 歌单 Tab:药丸搜索 + 行列表 */
 .music-list {
   display: flex;
   flex-direction: column;
@@ -469,7 +625,7 @@
 .music-search input::placeholder { color: var(--text-sub); }
 
 .music-rows {
-  max-height: 264px;
+  max-height: 340px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -547,8 +703,9 @@
 
 @media (max-width: 900px) {
   .music-stage { grid-template-columns: 1fr; }
-  .music-cover-col { max-width: 280px; margin: 0 auto; width: 100%; }
+  .music-card-vinyl { max-width: 420px; width: 100%; margin: 0 auto; }
   .music-vol { display: none; }
+  .music-lyrics { height: min(48vh, 380px); }
 }
 
 /* ============ 项目页(v2.3 对齐 Cecilian-Hub ProjectsBoard:玻璃矩阵)============ */
