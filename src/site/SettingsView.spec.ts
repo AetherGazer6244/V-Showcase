@@ -27,7 +27,7 @@ import SettingsView from './SettingsView.vue';
 import { useLightbox } from './composables';
 import { useScreensaver } from './screensaver';
 import { useFavorites } from './favorites';
-import { flushSettingsSave, resetSettings } from './settings';
+import { flushSettingsSave, resetSettings, useSettings } from './settings';
 
 const SETTINGS_KEY = 'vshowcase.settings';
 const FAVS_KEY = 'vshowcase.favs';
@@ -127,6 +127,25 @@ describe('SettingsView 我的收藏', () => {
     expect(lb.index.value).toBe(1);
     expect(lb.current.value?.url).toBe('https://a/1.jpg');
     lb.close();
+    wrapper.unmount();
+  });
+});
+
+describe('SettingsView 主题切换', () => {
+  it('点击主题卡 → 切换主题并写进 <html data-theme>', async () => {
+    const wrapper = await mountView();
+    const cards = wrapper.findAll('.theme-card');
+    expect(cards).toHaveLength(3);
+
+    await cards[1].trigger('click'); // 深色
+    await nextTick();
+    expect(useSettings().settings.value.theme).toBe('dark');
+    expect(document.documentElement.dataset.theme).toBe('dark');
+
+    await cards[0].trigger('click'); // 明亮
+    await nextTick();
+    expect(useSettings().settings.value.theme).toBe('light');
+    expect(document.documentElement.dataset.theme).toBe('light');
     wrapper.unmount();
   });
 });

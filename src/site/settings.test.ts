@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { nextTick } from 'vue';
 import {
   defaultSettings, defaultSaver, defaultReading, loadSettings, saveSettings, applySettings,
-  resetSettings, useSettings, flushSettingsSave, resolveTheme,
+  resetSettings, useSettings, flushSettingsSave, resolveTheme, setThemeWithReveal,
   ROWS_RANGE, WIDTH_RANGE, SPEED_RANGE, ROTATE_RANGE,
 } from './settings';
 import type { SiteSettings } from './settings';
@@ -320,5 +320,132 @@ describe('screensaver 屏保子设置', () => {
     expect(loadSettings().screensaver).toEqual({
       idleMin: 3, intervalSec: 10, order: 'seq', kenBurns: true,
     });
+  });
+});
+
+/* ============================================================
+ * setThemeWithReveal — 主题切换「按钮中心圆形向外扩散」
+ * ============================================================ */
+describe('setThemeWithReveal 主题圆形扩散', () => {
+  /** 假 View Transition:记录调用次数,finished 由测试手动收尾 */
+  function installFakeVT() {
+    const state = { calls: 0, skipCount: 0, resolve: null as null | (() => void) };
+    const finished = new Promise<void>((res) => { state.resolve = res; });
+    const fn = vi.fn((cb: () => void | Promise<void>) => {
+      state.calls++;
+      void Promise.resolve(cb());
+      return {
+        finished,
+        ready: Promise.resolve(),
+        updateCallbackDone: Promise.resolve(),
+        skipTransition: () => { state.skipCount++; state.resolve?.(); },
+      } as unknown as ViewTransition;
+    });
+    Object.defineProperty(document, 'startViewTransition', {
+      configurable: true, writable: true, value: fn,
+    });
+    return { fn, state };
+  }
+
+  /** 带矩形的假按钮(圆心 = 矩形中心) */
+  function fakeButton(rect: { left: number; top: number; width: number; height: number }): HTMLElement {
+    const el = document.createElement('button');
+    el.getBoundingClientRect = () => ({
+      ...rect, right: rect.left + rect.width, bottom: rect.top + rect.height,
+    }) as unknown as DOMRect;
+    return el;
+  }
+
+  afterEach(() => {
+    delete (document as unknown as Record<string, unknown>).startViewTransition;
+    const root = document.documentElement;
+    root.style.removeProperty('--theme-reveal-x');
+    root.style.removeProperty('--theme-reveal-y');
+    root.style.removeProperty('--theme-reveal-r');
+  });
+
+  it('浏览器不支持 View Transitions → 直接切换,不报错', () => {
+    setThemeWithReveal('dark');
+    expect(useSettings().settings.value.theme).toBe('dark');
+    expect(document.documentElement.dataset.theme).toBe('dark');
+  });
+
+  it('支持时走圆形扩散:写入圆心/半径,动画结束后清理变量', async () => {
+    const { fn, state } = installFakeVT();
+    const el = fakeButton({ left: 100, top: 50, width: 40, height: 40 });
+
+    setThemeWithReveal('dark', el);
+    expect(fn).toHaveBeenCalledTimes(1);
+
+    await nextTick();
+    expect(useSettings().settings.value.theme).toBe('dark');
+    expect(document.documentElement.dataset.theme).toBe('dark');
+
+    const root = document.documentElement;
+    expect(root.style.getPropertyValue('--theme-reveal-x')).toBe('120px');
+    expect(root.style.getPropertyValue('--theme-reveal-y')).toBe('70px');
+    expect(root.style.getPropertyValue('--theme-reveal-r')).not.toBe('');
+
+    state.resolve?.();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(root.style.getPropertyValue('--theme-reveal-x')).toBe('');
+    expect(root.style.getPropertyValue('--theme-reveal-r')).toBe('');
+  });
+
+  it('目标主题与当前一致 → 不播动画(点了等于没点)', () => {
+    const { fn } = installFakeVT();
+    setThemeWithReveal('light');
+    expect(fn).not.toHaveBeenCalled();
+    expect(useSettings().settings.value.theme).toBe('light');
+  });
+
+  it('「跟随系统」解析后与当前一致 → 不播动画,仅记录设置', () => {
+    const { fn } = installFakeVT();
+    const original = window.matchMedia;
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true, writable: true,
+      value: (q: string) => ({ matches: false, media: q, addEventListener() {}, removeEventListener() {} }),
+    });
+    try {
+      setThemeWithReveal('auto');
+    } finally {
+      Object.defineProperty(window, 'matchMedia', { configurable: true, writable: true, value: original });
+    }
+    expect(fn).not.toHaveBeenCalled();
+    expect(useSettings().settings.value.theme).toBe('auto');
+  });
+
+  it('动效总开关关闭 → 不播动画', () => {
+    const { fn } = installFakeVT();
+    const { settings } = useSettings();
+    settings.value = { ...settings.value, motion: false };
+    setThemeWithReveal('dark');
+    expect(fn).not.toHaveBeenCalled();
+    expect(settings.value.theme).toBe('dark');
+  });
+
+  it('系统减少动态效果 → 不播动画', () => {
+    const { fn } = installFakeVT();
+    const original = window.matchMedia;
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true, writable: true,
+      value: (q: string) => ({ matches: true, media: q, addEventListener() {}, removeEventListener() {} }),
+    });
+    try {
+      setThemeWithReveal('dark');
+    } finally {
+      Object.defineProperty(window, 'matchMedia', { configurable: true, writable: true, value: original });
+    }
+    expect(fn).not.toHaveBeenCalled();
+  });
+
+  it('动画中再次点击 → 掐掉上一次动画,两条不叠加', () => {
+    const { fn, state } = installFakeVT();
+    const el = fakeButton({ left: 0, top: 0, width: 40, height: 40 });
+    setThemeWithReveal('dark', el);
+    setThemeWithReveal('light', el);
+    expect(fn).toHaveBeenCalledTimes(2);
+    expect(state.skipCount).toBe(1);
   });
 });

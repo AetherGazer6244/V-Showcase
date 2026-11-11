@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import {
-  useSettings, resetSettings,
+  useSettings, resetSettings, setThemeWithReveal,
   ROWS_RANGE, WIDTH_RANGE, SPEED_RANGE, ROTATE_RANGE,
   SAVER_IDLE_RANGE, SAVER_INTERVAL_RANGE,
   READING_FONT_CHOICES, READING_LINE_CHOICES, READING_WIDTH_CHOICES,
@@ -36,6 +36,11 @@ const themeLabel = computed(() => {
   if (t === 'light') return '明亮';
   return '跟随系统';
 });
+
+/** 主题卡点击:新主题以卡片中心为圆心向外扩散(不支持动画的浏览器直接切换) */
+function pickTheme(t: ThemeName, e: MouseEvent): void {
+  setThemeWithReveal(t, e.currentTarget as HTMLElement | null);
+}
 
 const previewStyle = computed(() => ({
   animationDuration: (12 / settings.value.speed) + 's',
@@ -153,7 +158,7 @@ onUnmounted(() => {
             :class="{ active: settings.theme === t.value }"
             role="radio"
             :aria-checked="settings.theme === t.value ? 'true' : 'false'"
-            @click="settings.theme = t.value"
+            @click="pickTheme(t.value, $event)"
           >
             <span class="theme-thumb" :data-mode="t.value" aria-hidden="true">
               <span class="theme-thumb-nav"></span>

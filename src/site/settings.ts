@@ -14,9 +14,10 @@
  * 注意:
  *   - theme 支持 'auto'(跟随系统);applySettings 解析为具体值写 dataset,
  *     防闪烁内联脚本(各入口 HTML)用同一套解析逻辑,缺省明亮。
+ *   - setThemeWithReveal:手动切换主题时从「按钮中心」圆形扩散(见文件末尾)。
  *   - screensaver 子对象由 screensaver.ts / ScreensaverOverlay.vue 消费。
  * ============================================================ */
-import { ref, watch, watchEffect } from 'vue';
+import { ref, watch, watchEffect, nextTick } from 'vue';
 import { debounce } from '@/shared/utils';
 import { CONFIG } from './config';
 
@@ -275,4 +276,114 @@ export function initSettings(): void {
       /* 极老环境无 media query 支持,auto 静止为初始解析值 */
     }
   }
+}
+
+/* ============================================================
+ * 主题切换动画 —「按钮中心圆形向外扩散」
+ * ------------------------------------------------------------
+ * 实现:原生 View Transitions API。切换瞬间浏览器给新旧状态各拍
+ * 一张快照,新快照用 clip-path: circle() 从点击处(圆心)裁剪并放大,
+ * 旧快照垫在底下不动 → 观感就是新主题从按钮中心一圈圈铺开。
+ * 圆心/半径以 --theme-reveal-* 写在 <html> 上,动画由 CSS 消费。
+ *
+ * 降级(一律即时切换,绝不报错):
+ *   - 浏览器无 startViewTransition(旧版 Firefox / 部分 WebView)
+ *   - 目标主题解析后与当前相同(如深色下点「跟随系统」)
+ *   - 动效总开关关闭 / 系统 prefers-reduced-motion
+ * ============================================================ */
+
+/** 圆形扩散用到的 CSS 变量(写在 <html> 上,供 ::view-transition-* 消费) */
+const REVEAL_VARS = ['--theme-reveal-x', '--theme-reveal-y', '--theme-reveal-r'] as const;
+
+/** 正在进行的切换动画(连续点击时先掐掉旧的,避免两条过渡叠加) */
+let activeReveal: ViewTransition | null = null;
+
+/** 系统是否要求减少动态效果(与 fireflies.ts 同口径) */
+function prefersReducedMotion(): boolean {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
+  try {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch {
+    return false;
+  }
+}
+
+/** 写入主题(内存 + <html>);动画回调里也用它,保证快照拿到新主题 */
+function applyTheme(theme: ThemeName): void {
+  const s = state.settings.value;
+  if (s.theme !== theme) state.settings.value = { ...s, theme };
+  applySettings(state.settings.value);
+}
+
+/** 清理圆形扩散的 CSS 变量 */
+function clearRevealVars(): void {
+  const root = document.documentElement;
+  for (const v of REVEAL_VARS) root.style.removeProperty(v);
+}
+
+/**
+ * 切换主题:新主题以「按钮中心圆」向外扩散。
+ * @param theme  目标主题(light / dark / auto)
+ * @param origin 触发元素(取其矩形中心为圆心;缺省 = 视口中心)
+ */
+export function setThemeWithReveal(theme: ThemeName, origin?: Element | null): void {
+  const cur = state.settings.value;
+  /* 解析后主题没变 → 没必要播动画(点了等于没点),只写设置 */
+  const sameResolved = resolveTheme(cur.theme) === resolveTheme(theme);
+  const canAnimate =
+    !sameResolved &&
+    cur.motion &&
+    !prefersReducedMotion() &&
+    typeof document !== 'undefined' &&
+    typeof document.startViewTransition === 'function';
+
+  if (!canAnimate) {
+    applyTheme(theme);
+    return;
+  }
+
+  /* 圆心 = 元素矩形中心;半径 = 到视口最远角(保证铺满整屏) */
+  const rect = origin?.getBoundingClientRect?.();
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const hasRect = !!rect && (rect.width > 0 || rect.height > 0);
+  const x = hasRect ? rect.left + rect.width / 2 : vw / 2;
+  const y = hasRect ? rect.top + rect.height / 2 : vh / 2;
+  const r = Math.hypot(Math.max(x, vw - x), Math.max(y, vh - y)) + 1;
+
+  const root = document.documentElement;
+  root.style.setProperty('--theme-reveal-x', x + 'px');
+  root.style.setProperty('--theme-reveal-y', y + 'px');
+  root.style.setProperty('--theme-reveal-r', r + 'px');
+
+  /* 连续点击:掐掉上一次的动画(其 finished 回调不会清掉本次的变量) */
+  try {
+    activeReveal?.skipTransition();
+  } catch {
+    /* 上一次已结束,忽略 */
+  }
+
+  let vt: ViewTransition;
+  try {
+    vt = document.startViewTransition(() => {
+      applyTheme(theme);
+      /* 等 Vue 刷完(主题卡选中态等 DOM 变化)再让浏览器拍新快照 */
+      return nextTick();
+    });
+  } catch {
+    /* API 存在但调用失败(极端环境)→ 退回即时切换 */
+    applyTheme(theme);
+    clearRevealVars();
+    return;
+  }
+
+  activeReveal = vt;
+  const done = () => {
+    if (activeReveal === vt) {
+      activeReveal = null;
+      clearRevealVars();
+    }
+  };
+  /* 动画被打断时 finished 会 reject,两种结局都要收尾 */
+  vt.finished.then(done, done);
 }

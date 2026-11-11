@@ -72,6 +72,31 @@ html[data-motion='off'] .ss-img.kenburns,
 html[data-motion='off'] .ss-img.orient-90.kenburns,
 html[data-motion='off'] .ss-img.orient-270.kenburns { animation-play-state: paused; }
 
+/* ============ 主题切换:按钮中心圆形向外扩散 ============
+ * View Transitions 快照伪元素:新主题快照以圆形从点击处(卡片中心)
+ * 裁剪并放大,旧主题快照铺在底下不动 → 新主题从按钮中心一圈圈铺开。
+ * 圆心/半径由 settings.ts 写在 <html> 的 --theme-reveal-x/y/r 上。 */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-new(root) {
+  clip-path: circle(0 at var(--theme-reveal-x, 50%) var(--theme-reveal-y, 50%));
+  animation: theme-reveal 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes theme-reveal {
+  from { clip-path: circle(0 at var(--theme-reveal-x, 50%) var(--theme-reveal-y, 50%)); }
+  to   { clip-path: circle(var(--theme-reveal-r, 150vmax) at var(--theme-reveal-x, 50%) var(--theme-reveal-y, 50%)); }
+}
+
+/* 减少动态效果 / 动效总闸关闭 → 不扩散(JS 已跳过动画,这里是兜底)
+ * 注意同时放开 clip-path:否则新快照被裁成 0 圆 → 旧主题一直盖到动画结束才闪切 */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-new(root) { animation: none; clip-path: none; }
+}
+html[data-motion='off']::view-transition-new(root) { animation: none; clip-path: none; }
+
 /* ============ 响应式补充 ============ */
 @media (max-width: 768px) {
   .settings-hero { padding: 40px 16px 24px; }
