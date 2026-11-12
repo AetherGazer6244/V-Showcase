@@ -14,6 +14,7 @@ import './styles/screensaver.css';
 import './styles/settings.css';
 import './styles/post.css';
 import './styles/pages.css';
+import './styles/backdrop.css';
 import './styles/player.css';
 import './styles/overrides.css';
 

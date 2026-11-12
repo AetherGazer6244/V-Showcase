@@ -56,6 +56,14 @@ type ViewKey = keyof typeof views;
 
 const currentView = computed(() => views[(view.value as ViewKey) in views ? (view.value as ViewKey) : 'notfound']);
 
+/* 非主页图片蒙版背景:异步组件,只挂在非主页页面上。
+ * 主页本身就有整墙图片,不需要背景层;404 保持干净也不挂。
+ * ⚠ 用异步而非静态 import:它会把图片清单逻辑(apiClient)拖进主包,
+ *   主页首屏平白多背一份代码。 */
+const PageBackdrop = defineAsyncComponent(() => import('./PageBackdrop.vue'));
+/** 背景层挂不挂:非主页、且不是 404 */
+const showBackdrop = computed(() => view.value !== 'home' && view.value !== 'notfound');
+
 /* 灯箱与屏保是全站常驻层(任意页面都能唤起),保持静态引入。
  * FloatingCapsule 同理:迷你播放胶囊常驻右下角(无曲目时自隐藏,
  * 主页隐身但不销毁 —— 跨页续播状态在 player.ts 单例里)。 */
@@ -90,6 +98,9 @@ onMounted(() => {
 </script>
 
 <template>
+  <!-- 背景层在最前(装饰层,z-index:-1 压在内容之下) -->
+  <PageBackdrop v-if="showBackdrop" :page-key="viewKey" />
+
   <header class="navbar">
     <div><a class="navbar-title" href="/"><span class="navbar-logo" aria-hidden="true">V</span><span class="navbar-wordmark">Showcase</span></a></div>
     <nav class="navbar-nav" aria-label="主导航">

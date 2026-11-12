@@ -1,0 +1,68 @@
+/* ============================================================
+ * V-Showcase 站点样式 — 非主页图片蒙版背景
+ * ------------------------------------------------------------
+ * 一张来自主页图池的图:放大铺满 + 模糊,再用 CSS mask 从上到下淡出,
+ * 最后盖一层主题化薄纱 → 页面有氛围,但正文依然干净可读。
+ *
+ * ★ z-index:-1  → 压在所有内容之下;玻璃卡片的 backdrop-filter 仍能采样到它
+ * ★ pointer-events:none → 不拦任何点击
+ * ★ 静态无动画   → 最省 GPU,天然满足「减少动态效果」与动效总开关
+ * ============================================================ */
+
+.page-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+
+  /* 主题化薄纱:亮色压白、深色压黑,保证正文对比度 */
+  --backdrop-img-opacity: 0.5;
+  --backdrop-veil-top: rgba(253, 253, 253, 0.34);
+  --backdrop-veil-mid: rgba(248, 249, 251, 0.58);
+  --backdrop-veil-bottom: rgba(244, 246, 249, 0.96);
+}
+
+:root[data-theme='dark'] .page-backdrop {
+  --backdrop-img-opacity: 0.58;
+  --backdrop-veil-top: rgba(18, 20, 24, 0.38);
+  --backdrop-veil-mid: rgba(18, 20, 24, 0.62);
+  --backdrop-veil-bottom: rgba(18, 20, 24, 0.96);
+}
+
+/* 图层本体:cover 铺满 + 轻微放大(盖住模糊溢出边) */
+.page-backdrop-image {
+  position: absolute;
+  inset: -8%;
+  background-position: center 32%;
+  background-size: cover;
+  background-repeat: no-repeat;
+  opacity: var(--backdrop-img-opacity);
+  filter: blur(26px) saturate(1.05);
+  transform: scale(1.02);
+  /* 蒙版:上浓下淡,内容区自然融回页面底色 */
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.82) 32%, rgba(0, 0, 0, 0.36) 62%, transparent 88%);
+  mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.82) 32%, rgba(0, 0, 0, 0.36) 62%, transparent 88%);
+}
+
+/* 主题薄纱:盖在图上、压在内容之下 */
+.page-backdrop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    var(--backdrop-veil-top) 0%,
+    var(--backdrop-veil-mid) 42%,
+    var(--backdrop-veil-bottom) 78%,
+    var(--bg-end) 100%
+  );
+}
+
+/* 窄屏:少糊一点,省 GPU */
+@media (max-width: 720px) {
+  .page-backdrop-image {
+    inset: -6%;
+    filter: blur(16px) saturate(1.02);
+  }
+}
