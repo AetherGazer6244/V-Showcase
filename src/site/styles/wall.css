@@ -21,6 +21,10 @@
   justify-content: center;
   gap: 20px;
   background: linear-gradient(180deg, var(--bg-start), var(--bg-end));
+  /* 淡出走 .is-fading 类(不用 Vue <transition> 的 leave 类:
+   * 那套靠 requestAnimationFrame 推进,浏览器挂起 rAF 时遮罩会永远
+   * 停在 leave-from —— 不透明地盖住整墙,表现为「一片空白」) */
+  transition: opacity 0.6s ease;
 }
 .wall-splash-mark {
   width: 64px;
@@ -53,8 +57,7 @@
   to { transform: rotate(360deg); }
 }
 /* 揭幕:整幕淡出(转场被 data-motion='off' 全局压制时退化为直接消失,可接受) */
-.wall-splash-leave-active { transition: opacity 0.6s ease; }
-.wall-splash-leave-to { opacity: 0; }
+.wall-splash.is-fading { opacity: 0; }
 
 .row {
   overflow: hidden;

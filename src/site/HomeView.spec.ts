@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import HomeView from './HomeView.vue';
 import { useSettings, defaultSettings } from './settings';
@@ -41,11 +41,13 @@ describe('HomeView 开屏最短时长(MIN_SPLASH_MS)', () => {
 
     // 全部 @load → forceReady;但距挂载远不足 800ms → 延迟就绪
     for (const img of wrapper.findAll('.card img')) await img.trigger('load');
-    await sleep(80); // 等 rAF 批量提交 flushLoaded
+    await sleep(80); // 等加载态批量提交
     expect(wrapper.find('.wall.ready').exists()).toBe(false);
 
     await sleep(900); // 越过 800ms 补足窗
     expect(wrapper.find('.wall.ready').exists()).toBe(true);
+    // 揭幕淡出 0.6s 后遮罩才从 DOM 摘掉(定时器驱动,不依赖 rAF)
+    await sleep(700);
     expect(wrapper.find('.wall-splash').exists()).toBe(false);
     wrapper.unmount();
   });
@@ -72,3 +74,51 @@ async function flushMicrotasks() {
   await Promise.resolve();
   await Promise.resolve();
 }
+
+/* ============================================================
+ * 加载态提交兜底(2026-11 线上事故回归)
+ * ------------------------------------------------------------
+ * 事故:窗口被遮挡 / 节能模式下浏览器会挂起 requestAnimationFrame
+ * (此时 document.visibilityState 仍是 'visible'),带来两处空白:
+ *   1. 只靠 rAF 提交加载态 → 图片早就下载完成,卡片却一直 opacity:0;
+ *   2. Vue <transition> 的 nextFrame 同样靠 rAF → 开屏遮罩永远停在
+ *      leave-from(不透明),把整墙盖死。
+ * 修复:加载态改 rAF + setTimeout 双通道;开屏遮罩改「类名 + 定时器」收尾。
+ * ============================================================ */
+describe('HomeView 加载态提交兜底', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    const { settings } = useSettings();
+    settings.value = { ...defaultSettings(), autoRotate: false };
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('rAF 被挂起(不回调)时,setTimeout 兜底仍把加载态落地', async () => {
+    // 模拟浏览器挂起 rAF:注册了回调但永不执行
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
+
+    const wrapper = mount(HomeView);
+    await flushMicrotasks();
+
+    // 图片全部加载完成(与真实浏览器一致:complete 且 naturalWidth > 0)
+    for (const img of wrapper.findAll('.card img')) await img.trigger('load');
+
+    // 没有 rAF 时,兜底计时器必须在 100ms 内提交
+    await sleep(250);
+    const lit = wrapper.findAll('.card img.is-loaded').length;
+    expect(lit).toBeGreaterThan(0);
+    expect(lit).toBe(wrapper.findAll('.card img').length);
+
+    // 开屏最短时长(800ms)过后,墙必须就绪且卡片可见
+    await sleep(900);
+    expect(wrapper.find('.wall.ready').exists()).toBe(true);
+
+    // 遮罩必须自己摘掉(定时器驱动),不能永远不透明地盖住整墙
+    await sleep(700);
+    expect(wrapper.find('.wall-splash').exists()).toBe(false);
+    wrapper.unmount();
+  });
+});

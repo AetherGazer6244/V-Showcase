@@ -56,6 +56,8 @@ const PREHEAT_GRACE_MS = 800;
 /** 开屏进度条最短停留时长:网快/全缓存时避免进度条一闪而过(观感生硬)。
  *  从组件挂载起算,不足此时长的部分在就绪前补等。 */
 const MIN_SPLASH_MS = 800;
+/** 加载态提交的兜底时限(ms):见 scheduleLoadedFlush 的说明 */
+const LOADED_FLUSH_FALLBACK_MS = 100;
 
 const { focalStyle } = useFocal();
 const { orientClass } = useOrientation();
@@ -76,6 +78,12 @@ const total = ref(0);
 const allLoaded = ref(false);
 /** 换班中(整墙淡出,遮蔽内容替换) */
 const swapping = ref(false);
+/** 开屏遮罩是否仍挂在 DOM 里(淡出结束后才摘掉) */
+const splashVisible = ref(true);
+/** 开屏遮罩正在淡出 */
+const splashFading = ref(false);
+/** 揭幕淡出时长(ms),与 CSS .wall-splash 的 0.6s 对齐 */
+const SPLASH_FADE_MS = 600;
 /** 已就绪(加载成功或失败)的图片,控制淡入(键 = img.url) */
 const loadedUrls = ref(new Set<string>());
 
@@ -88,6 +96,8 @@ const heldRows = ref(new Set<number>());
 const pausedRows = ref(new Set<number>());
 
 let safetyTimer: ReturnType<typeof setTimeout> | null = null;
+/** 开屏遮罩淡出收尾计时器 */
+let splashTimer: ReturnType<typeof setTimeout> | null = null;
 /** 开屏起点(onMounted 记录),配合 MIN_SPLASH_MS 计算还需补等多久 */
 let openedAt = 0;
 /** 最短时长补足计时器(非 null = 已决定就绪、正在补等;防双触发源重复排程) */
@@ -304,9 +314,28 @@ function applyReady() {
     console.warn('[V-Showcase] 加载超时/部分失败,强制启动滚动');
   }
   allLoaded.value = true;
+  hideSplash();
   if (safetyTimer) { clearTimeout(safetyTimer); safetyTimer = null; }
   // 墙就绪后重排一次:此时预热可登记 loadedUrls,换班新卡不淡入闪白
   scheduleRotate();
+}
+
+/**
+ * 收起开屏遮罩:加淡出类,定时后从 DOM 摘掉。
+ *
+ * ⚠ 刻意不用 Vue <transition>:它的 nextFrame 依赖 requestAnimationFrame,
+ *   浏览器挂起 rAF(窗口被遮挡/节能模式)时 leave-from 永远摘不掉,
+ *   遮罩会一直不透明地盖住整墙 —— 表现为「墙在动但一片空白」。
+ *   类名 + setTimeout 不依赖 rAF,定时器照常触发。
+ */
+function hideSplash(): void {
+  if (!splashVisible.value || splashFading.value) return;
+  splashFading.value = true;
+  if (splashTimer) { clearTimeout(splashTimer); splashTimer = null; }
+  splashTimer = setTimeout(() => {
+    splashTimer = null;
+    splashVisible.value = false;
+  }, SPLASH_FADE_MS);
 }
 
 /** 登记某 url 已就绪(加载成功或失败都算,控制淡入)
@@ -314,18 +343,60 @@ function applyReady() {
  *  ⚠ 加载事件逐张到达,而 HomeView 是单一组件、单一渲染函数(覆盖全部行与卡片):
  *    每张图都直接改响应式 Set 就会整页重渲染一次 —— 60 张 = 60 次,
  *    每次重建全部 vnode(约 240 个)并重算全部样式绑定。
- *    这里攒进非响应式集合,到下一帧一次性提交,60 次降为 1 次。 */
+ *    这里攒进非响应式集合,到下一帧(或兜底计时器)一次性提交,60 次降为 1 次。 */
 const pendingLoaded = new Set<string>();
 let loadedFlushRaf: number | null = null;
+/** 兜底计时器句柄(见 scheduleLoadedFlush) */
+let loadedFlushTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** 取消在途的 rAF:部分环境没有 cancelAnimationFrame,需存在性判断 */
+function cancelLoadedFlushRaf(): void {
+  if (loadedFlushRaf == null) return;
+  if (typeof cancelAnimationFrame === 'function') cancelAnimationFrame(loadedFlushRaf);
+  loadedFlushRaf = null;
+}
+
+/** 取消在途的兜底计时器 */
+function clearLoadedFlushTimer(): void {
+  if (loadedFlushTimer == null) return;
+  clearTimeout(loadedFlushTimer);
+  loadedFlushTimer = null;
+}
+
+/**
+ * 排一次「加载态提交」:rAF + setTimeout 双通道,谁先到谁提交并取消另一条。
+ *
+ * ⚠ 2026-11 线上事故(勿回退成只靠 rAF):
+ *   浏览器在窗口被遮挡、节能模式、远程桌面等场景会挂起 rAF,
+ *   而 document.visibilityState 仍是 'visible'。此时图片早已下载完成,
+ *   但 flushLoaded 永远不跑 → loadedUrls 永不更新 → 卡片一直 opacity:0,
+ *   表现为「墙在流动但全是空白卡片」(点开灯箱却能看到图,
+ *   因为灯箱读的是原图)。30s 安全计时器只把墙置 ready,救不了空白。
+ *   setTimeout 兜底保证「已加载」一定能落地。
+ */
+function scheduleLoadedFlush(): void {
+  if (loadedFlushRaf != null || loadedFlushTimer != null) return;
+  if (typeof requestAnimationFrame === 'function') {
+    loadedFlushRaf = requestAnimationFrame(() => {
+      loadedFlushRaf = null;
+      clearLoadedFlushTimer();
+      flushLoaded();
+    });
+  }
+  loadedFlushTimer = setTimeout(() => {
+    loadedFlushTimer = null;
+    cancelLoadedFlushRaf();
+    flushLoaded();
+  }, LOADED_FLUSH_FALLBACK_MS);
+}
 
 function markLoaded(url: string) {
   if (loadedUrls.value.has(url) || pendingLoaded.has(url)) return;
   pendingLoaded.add(url);
-  if (loadedFlushRaf == null) loadedFlushRaf = requestAnimationFrame(flushLoaded);
+  scheduleLoadedFlush();
 }
 
 function flushLoaded() {
-  loadedFlushRaf = null;
   if (disposed || pendingLoaded.size === 0) return;
   const next = new Set(loadedUrls.value);
   for (const u of pendingLoaded) next.add(u);
@@ -623,10 +694,8 @@ function onVisibilityChange() {
   if (document.hidden) return;
   // 后台期间 rAF 停摆,滞留的加载登记回前台立刻冲一次(不等下一帧),
   // 否则「后台打开、切回前台」时墙面可能多等一拍才算就绪
-  if (loadedFlushRaf != null) {
-    cancelAnimationFrame(loadedFlushRaf);
-    loadedFlushRaf = null;
-  }
+  cancelLoadedFlushRaf();
+  clearLoadedFlushTimer();
   flushLoaded();
   // 回到前台时重置轮换计时(后台不计时),并刷新下一窗预热
   scheduleRotate();
@@ -697,6 +766,7 @@ onMounted(async () => {
     scheduleRotate();
   } else {
     allLoaded.value = true;
+    hideSplash();
   }
 });
 
@@ -707,26 +777,34 @@ onUnmounted(() => {
   document.removeEventListener('visibilitychange', onVisibilityChange);
   unwatchMotionPref();
   if (safetyTimer) clearTimeout(safetyTimer);
+  if (splashTimer) { clearTimeout(splashTimer); splashTimer = null; }
   if (pendingReadyTimer) { clearTimeout(pendingReadyTimer); pendingReadyTimer = null; }
   if (justDraggedTimer) clearTimeout(justDraggedTimer);
   if (pendingOpenTimer) clearTimeout(pendingOpenTimer);
   if (rotateTimer) { clearTimeout(rotateTimer); rotateTimer = null; }
   if (rafId != null) cancelAnimationFrame(rafId);
   if (dragRaf != null) cancelAnimationFrame(dragRaf);
-  if (loadedFlushRaf != null) { cancelAnimationFrame(loadedFlushRaf); loadedFlushRaf = null; }
+  cancelLoadedFlushRaf();
+  clearLoadedFlushTimer();
   pendingLoaded.clear();
 });
 </script>
 
 <template>
   <main class="wall" :class="{ ready: allLoaded, swapping }" aria-label="流动图片墙">
-    <!-- 开屏遮罩(v2.5):名单请求与图片下载全程藏在遮罩后,墙就绪即整幕淡出揭幕 -->
-    <transition name="wall-splash">
-      <div v-if="!allLoaded" class="wall-splash" role="status" aria-label="正在准备图片墙">
-        <span class="wall-splash-mark" aria-hidden="true">V</span>
-        <span class="wall-splash-spinner" aria-hidden="true"></span>
-      </div>
-    </transition>
+    <!-- 开屏遮罩(v2.5):名单请求与图片下载全程藏在遮罩后,墙就绪即整幕淡出揭幕
+     * ⚠ 不用 <transition>:Vue 过渡靠 rAF 推进,浏览器挂起 rAF 时遮罩会永远
+     *   停在 leave-from(不透明),把整墙盖死 → 表现为「一片空白」。改类名 + 定时器 -->
+    <div
+      v-if="splashVisible"
+      class="wall-splash"
+      :class="{ 'is-fading': splashFading }"
+      role="status"
+      aria-label="正在准备图片墙"
+    >
+      <span class="wall-splash-mark" aria-hidden="true">V</span>
+      <span class="wall-splash-spinner" aria-hidden="true"></span>
+    </div>
 
     <div
       v-for="(row, r) in displayRows"
