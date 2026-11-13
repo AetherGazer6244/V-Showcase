@@ -18,6 +18,8 @@
  *   POST /api/focal-points              → 写 src/site/focalPoints.ts
  *   GET  /api/proxy-images              → 尝试拉取 viewer 上游图床
  *   POST /api/upload-image              → 代理上传图片到图床(Lsky Pro 协议)
+ *                                          带 x-image-md5 头时先与图床目录对账,
+ *                                          命中直接复用已有外链;上传后验活
  *   POST /api/sync-deploy               → 提交并推送数据文件(body 可选 {file})
  *   POST /api/run-ai                    → spawn AI 工具,SSE 流式输出
  *   GET  /api/albums                    → 读 src/site/albums.ts
@@ -70,6 +72,11 @@ import {
   readPlaylist, writePlaylist, validatePlaylistDoc,
   readProjects, writeProjects, validateProjectsDoc,
 } from './lib/content-files.mjs';
+import {
+  buildMd5Index,
+  lookupByMd5,
+  verifyImageAlive,
+} from './lib/upload-guard.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TOOLS = path.resolve(__dirname, '..');         // tools/
@@ -369,6 +376,8 @@ async function fetchUpstreamImages(perPage) {
 
 // 包装成图床原始三段式: {status, message, data: {data: items, current_page, last_page, total}}
 // 保留 innerData 中的其他字段(如有),仅覆盖 data 数组相关字段。
+// ⚠️ 上游的 total/last_page 被下面覆盖成了「本次返回多少条」;上传管线的对账
+//    (闸 2)需要知道上游真实总量,故另存一份 upstream_* 字段。
 function wrapUpstream(items, innerData) {
   return {
     status: true,
@@ -379,6 +388,8 @@ function wrapUpstream(items, innerData) {
       last_page: 1,
       total: items.length,
       per_page: items.length,
+      upstream_total: Number(innerData && innerData.total) || items.length,
+      upstream_last_page: Number(innerData && innerData.last_page) || 1,
     }),
   };
 }
@@ -442,11 +453,54 @@ function readBodyRaw(req, MAX) {
   });
 }
 
+/* ── 图床 md5 索引(上传前对账用) ─────────────────────────
+ * 图床目录每条记录带 md5 字段(与直连接口一致),内容相同 → md5 相同,
+ * 正是 lessons-learned 1.2「批量上传产生重复 URL」的对账依据。
+ * 索引 TTL 5 分钟:既覆盖「连传多张」的场景,又不会长期拿旧目录。
+ * ⚠️ 目录拉取上限 500 张(fetchUpstreamImages 的硬顶),超出部分不在索引里,
+ *    对账只覆盖已拉到的部分 —— 超限时打日志说明,不静默假装全覆盖。 */
+const MD5_INDEX_TTL_MS = 5 * 60 * 1000;
+const md5IndexCache = { at: 0, loaded: false, map: new Map(), truncated: false };
+
+/** 取(maybe 重建)图床 md5 索引 */
+async function getMd5Index() {
+  const now = Date.now();
+  if (md5IndexCache.loaded && now - md5IndexCache.at < MD5_INDEX_TTL_MS) {
+    return md5IndexCache.map;
+  }
+  try {
+    const data = await fetchUpstreamImages(500);
+    const items = (data && data.data && data.data.data) || [];
+    // 上游真实总量(wrapUpstream 会把 total 覆盖成「本次返回条数」,故取 upstream_total)
+    const upstreamTotal = Number(data && data.data && data.data.upstream_total) || items.length;
+    md5IndexCache.map = buildMd5Index(items);
+    md5IndexCache.truncated = upstreamTotal > items.length;
+    if (md5IndexCache.truncated) {
+      log('⚠️ ', `图床目录 ${upstreamTotal} 张,只索引了前 ${items.length} 张(去重覆盖不全)`);
+    }
+    log('🔍', `md5 索引已建:${md5IndexCache.map.size} 条`);
+  } catch (e) {
+    log('⚠️ ', `md5 索引构建失败(本次跳过对账,不影响上传):${e.message}`);
+    md5IndexCache.map = new Map();
+  }
+  md5IndexCache.at = now;
+  md5IndexCache.loaded = true;
+  return md5IndexCache.map;
+}
+
 /**
  * POST /api/upload-image — 代理上传图片到图床(Lsky Pro 协议)。
  * 客户端的 multipart 原样转发到 {apiBase}/upload,token 取
  * CONFIG.token 或 .dev.vars 的 QUBU_TOKEN,绝不回传浏览器。
- * 成功:{ ok:true, data:{ url } };失败:{ ok:false, error }。
+ *
+ * 三道闸(对应 lessons-learned 1.1/1.2/1.3):
+ *   闸 1 客户端侧:magic bytes 校验格式 + 批内去重(见 src/manager/UploadBoard.vue)
+ *   闸 2 本函数:md5 与图床目录对账,命中 → 不上传,直接复用已有外链
+ *   闸 3 本函数:上传后验活,确认返回的外链真能取到图片
+ *
+ * 成功:{ ok:true, data:{ url, name } }
+ * 命中去重:{ ok:true, dedup:true, data:{ url, name } }
+ * 失败:{ ok:false, error }
  */
 async function uploadImage(req, res) {
   const MAX = 20 * 1024 * 1024;
@@ -459,6 +513,8 @@ async function uploadImage(req, res) {
   if (!/^multipart\/form-data/i.test(contentType)) {
     return fail(400, '必须是 multipart/form-data');
   }
+  // 客户端算好的文件 md5(对账用);没有就跳过对账,不影响上传
+  const clientMd5 = String(req.headers['x-image-md5'] || '').trim().toLowerCase();
   let body;
   try {
     body = await readBodyRaw(req, MAX);
@@ -475,6 +531,20 @@ async function uploadImage(req, res) {
     uploadUrl = CONFIG.apiBase.replace(/\/+$/, '') + '/upload';
   } catch (e) {
     return fail(500, '读取图床配置失败:' + e.message);
+  }
+
+  // ── 闸 2:与图床目录对账(md5 命中 → 不上传,直接复用已有外链) ──
+  if (clientMd5) {
+    const index = await getMd5Index();
+    const hit = lookupByMd5(index, clientMd5);
+    if (hit) {
+      log('♻️ ', `图床已有同内容图片(md5 ${clientMd5.slice(0, 8)}…),跳过上传:${hit.url}`);
+      return sendJson(res, 200, {
+        ok: true,
+        dedup: true,
+        data: { url: hit.url, name: hit.name },
+      });
+    }
   }
 
   // ── 转发到图床 ──
@@ -505,8 +575,29 @@ async function uploadImage(req, res) {
     const url = json?.data?.links?.url;
     if (!url) throw new Error('图床返回缺少 data.links.url');
 
+    // ── 闸 3:上传后验活(确认外链真的能取到图片) ──
+    // 只在「确定不可用」(4xx/5xx/返回的不是图片)时判失败;
+    // 本地 DNS 抖动(lessons-learned 3.1)只记警告,不能把好图误判成坏图。
+    const alive = await verifyImageAlive(url);
+    if (!alive.ok && !alive.uncertain) {
+      throw new Error(`图床已收下,但外链取不到图片(${alive.error}):${url}`);
+    }
+    if (alive.uncertain) {
+      log('⚠️ ', `上传后验活未决(本地网络异常,不影响已入库):${alive.error}`);
+    }
+
+    // 新图回填索引:同一批连传时,后一张能命中前一张
+    if (clientMd5) {
+      md5IndexCache.map.set(clientMd5, { url, name: String(json?.data?.name || '') });
+    }
+
     log('🖼', `上传成功: ${url}`);
-    sendJson(res, 200, { ok: true, data: { url, name: json?.data?.name || '' } });
+    sendJson(res, 200, {
+      ok: true,
+      data: { url, name: json?.data?.name || '' },
+      verified: alive.ok,
+      verifyNote: alive.uncertain ? `验活未决(${alive.error}),外链请人工确认` : '',
+    });
   } catch (e) {
     log('❌', `上传失败: ${e.message}`);
     sendJson(res, 502, { ok: false, error: e.message });
