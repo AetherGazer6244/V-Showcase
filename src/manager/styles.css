@@ -1050,6 +1050,7 @@ html, body {
 }
 .upload-item.is-fail { border-color: rgba(255, 138, 128, 0.4); }
 .upload-item.is-ok { border-color: rgba(61, 220, 151, 0.35); }
+.upload-item.is-dedup { border-color: rgba(99, 102, 241, 0.4); }
 .upload-thumb {
   flex: none;
   width: 52px; height: 40px;
@@ -1071,7 +1072,21 @@ html, body {
 }
 .upload-item.is-uploading .upload-item-status { color: var(--warn); }
 .upload-item.is-ok .upload-item-status { color: var(--ok); }
+.upload-item.is-dedup .upload-item-status { color: var(--primary); }
 .upload-item.is-fail .upload-item-status { color: var(--danger); }
+.upload-item-note {
+  margin-top: 2px;
+  font-size: 0.68rem;
+  color: var(--text-sub);
+  opacity: 0.85;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.upload-empty {
+  padding: 16px 8px;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-sub);
+}
 .upload-item-url {
   font-family: var(--mono);
   font-size: 0.68rem;
