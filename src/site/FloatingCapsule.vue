@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { usePlayer } from './player';
+import {
+  CAPSULE_POS_KEY,
+  parseCapsulePos,
+  serializeCapsulePos,
+  toFraction,
+  fromFraction,
+  type CapsuleFraction,
+} from './capsulePos';
 
 /* ============================================================
  * FloatingCapsule — 右下角迷你播放胶囊(v2.3,替代原全宽 PlayerBar)
@@ -10,6 +18,11 @@ import { usePlayer } from './player';
  *   - 播放/暂停 + 下一曲两钮(完整控制在音乐页)
  *   - pointer 拖动(无惯性),位置 localStorage 记忆,视口内夹取
  *   - 主页隐身(不挡流动图片墙),其余页面显示 —— 由 App.vue 传 hidden
+ *
+ * ⚠️ 位置按「视口比例」记忆,不是绝对像素:
+ *    浏览器缩放会改变视口像素尺寸(1920×1080 → 1280×720),
+ *    存绝对像素会让胶囊缩放后跑到屏幕外被夹回、来回缩放还会逐步漂移。
+ *    缩放时只按比例重算显示坐标,【不】把夹取后的像素写回存储值。
  * ============================================================ */
 
 const props = defineProps<{ hidden?: boolean }>();
@@ -18,22 +31,29 @@ const player = usePlayer();
 const visible = computed(() => player.index.value >= 0);
 
 /* ---- 位置记忆 ---- */
-const POS_KEY = 'vshowcase.capsule-pos';
-/** {x,y} = 视口坐标左上角;null = 缺省右下角(首访) */
-const pos = ref<{ x: number; y: number } | null>(loadPos());
+/** 记忆值:视口比例(缩放/改窗口大小时的唯一依据) */
+const frac = ref<CapsuleFraction | null>(null);
+/** 当前显示坐标(像素)—— 由 frac 换算而来;null = 缺省右下角停靠(首访) */
+const pos = ref<{ x: number; y: number } | null>(null);
 const el = ref<HTMLElement | null>(null);
 const dragging = ref(false);
 
-function loadPos(): { x: number; y: number } | null {
+function loadFrac(): CapsuleFraction | null {
   try {
-    const raw = JSON.parse(localStorage.getItem(POS_KEY) || 'null') as { x: number; y: number } | null;
-    if (raw && Number.isFinite(raw.x) && Number.isFinite(raw.y)) return { x: raw.x, y: raw.y };
-  } catch { /* 坏数据当缺省 */ }
-  return null;
+    return parseCapsulePos(
+      localStorage.getItem(CAPSULE_POS_KEY),
+      window.innerWidth,
+      window.innerHeight,
+    );
+  } catch {
+    return null; // 隐私模式等读取失败 → 首访默认停靠
+  }
 }
 
-function savePos(p: { x: number; y: number }): void {
-  try { localStorage.setItem(POS_KEY, JSON.stringify(p)); } catch { /* 隐私模式静默 */ }
+function saveFrac(f: CapsuleFraction): void {
+  try {
+    localStorage.setItem(CAPSULE_POS_KEY, serializeCapsulePos(f));
+  } catch { /* 隐私模式静默 */ }
 }
 
 /** 缺省停靠点:右下角 24px(Cecilian-Hub 同款) */
@@ -53,6 +73,11 @@ function clampToViewport(p: { x: number; y: number }): { x: number; y: number } 
     x: Math.min(Math.max(8, p.x), Math.max(8, window.innerWidth - w - 8)),
     y: Math.min(Math.max(8, p.y), Math.max(8, window.innerHeight - h - 8)),
   };
+}
+
+/** 按当前视口把记忆的比例换算成像素并夹回视口内 */
+function posFromFrac(f: CapsuleFraction): { x: number; y: number } {
+  return clampToViewport(fromFraction(f, window.innerWidth, window.innerHeight));
 }
 
 /* ---- 拖动(pointer capture;按钮区不触发) ---- */
@@ -80,16 +105,23 @@ function onPointerMove(e: PointerEvent) {
 function onPointerUp() {
   if (!dragging.value) return;
   dragging.value = false;
-  if (pos.value) savePos(pos.value);
+  if (!pos.value) return;
+  // 只在「用户放手」这一刻写回比例;缩放/夹取不写,避免来回缩放把位置越推越偏
+  const f = toFraction(pos.value.x, pos.value.y, window.innerWidth, window.innerHeight);
+  frac.value = f;
+  saveFrac(f);
 }
 
 function onResize() {
-  if (pos.value) pos.value = clampToViewport(pos.value);
+  // 缩放/改窗口大小:按比例重算显示坐标,记忆值保持不动
+  if (frac.value) pos.value = posFromFrac(frac.value);
 }
 
 onMounted(() => {
   window.addEventListener('resize', onResize);
-  if (pos.value) pos.value = clampToViewport(pos.value);  // 小屏恢复时夹回
+  const f = loadFrac();
+  frac.value = f;
+  if (f) pos.value = posFromFrac(f);     // 小屏恢复时夹回
 });
 onUnmounted(() => window.removeEventListener('resize', onResize));
 
