@@ -580,6 +580,27 @@
   mask-image: linear-gradient(transparent, #000 10%, #000 90%, transparent);
   -webkit-mask-image: linear-gradient(transparent, #000 10%, #000 90%, transparent);
 }
+
+/* 细滚动条:音乐页两个滚动区(歌词 / 歌单)。
+ * 颜色取主题变量,深浅主题自动跟随 —— 系统默认滚动条是浅色亮条,
+ * 压在深色毛玻璃卡片上很扎眼(2026-11 修)。
+ * 全局 color-scheme 已在 base.css 声明,此处是进一步的「细条」美化。 */
+.music-lyrics,
+.music-rows {
+  scrollbar-width: thin;                                   /* Firefox */
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+.music-lyrics::-webkit-scrollbar,
+.music-rows::-webkit-scrollbar { width: 6px; height: 6px; }
+.music-lyrics::-webkit-scrollbar-track,
+.music-rows::-webkit-scrollbar-track { background: transparent; }
+.music-lyrics::-webkit-scrollbar-thumb,
+.music-rows::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 999px;
+}
+.music-lyrics::-webkit-scrollbar-thumb:hover,
+.music-rows::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
 .music-lrc-line {
   border: 0;
   background: none;
