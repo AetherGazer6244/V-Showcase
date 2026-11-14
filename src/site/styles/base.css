@@ -37,6 +37,10 @@
   --glass-border-strong: rgba(15, 23, 42, 0.22);
   --img-bg:     #eceff3;
 
+  /* 滚动条(自绘细条用;原生滚动条颜色由 color-scheme 决定) */
+  --scrollbar-thumb:        rgba(15, 23, 42, 0.26);
+  --scrollbar-thumb-hover:  rgba(15, 23, 42, 0.44);
+
   /* 阴影/文字投影 — 明亮主题柔化或去除 */
   --nav-shadow:     0 4px 18px rgba(31, 35, 45, 0.08);
   --title-shadow:   none;
@@ -100,6 +104,9 @@
   --glass-border-strong: rgba(255, 255, 255, 0.3);
   --img-bg:     #23262c;
 
+  --scrollbar-thumb:        rgba(255, 255, 255, 0.26);
+  --scrollbar-thumb-hover:  rgba(255, 255, 255, 0.44);
+
   --nav-shadow:     0 6px 20px rgba(0, 0, 0, 0.35);
   --title-shadow:   0 2px 12px rgba(0, 0, 0, 0.5);
   --nav-link-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
@@ -114,6 +121,12 @@
 
 /* ============ 基础重置 ============ */
 * { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* 让浏览器自带的部件(滚动条、表单控件、自动填充)跟着站点主题走。
+ * 缺了这一句,深色主题下滚动条仍是系统浅色亮条(2026-11 修)。
+ * 站点主题由 settings.ts 写 html[data-theme],故两态都声明。 */
+:root { color-scheme: light; }
+:root[data-theme='dark'] { color-scheme: dark; }
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
