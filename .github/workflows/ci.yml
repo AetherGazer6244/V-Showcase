@@ -33,6 +33,13 @@ jobs:
       # 不用 `|| npm install`:那会掩盖 lockfile 与 package.json 的漂移
       - run: npm ci
 
+      # ⚠️ 必须先生成 src/generated/(构建产物,已 gitignore):
+      #    src/site/posts.ts 直接 import ../generated/posts.json,
+      #    新克隆的仓库里这目录不存在 → vue-tsc 会报 TS2307,CI 全绿不了。
+      #    (2026-11 修:CI 长期挂在「Typecheck」这一步就是这个原因)
+      - name: Generate content (src/generated)
+        run: npm run build:posts
+
       - name: Typecheck (site + manager)
         run: npm run typecheck
 
