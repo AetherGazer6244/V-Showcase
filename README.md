@@ -60,7 +60,18 @@ Manager「博客 / 音乐 / 项目」Tab 保存即校验并重建产物;「保�
 
 推 main 自动部署（**前提**：CF Pages 项目的 Git 集成是连着的）。
 ⚠️ 若 `npx wrangler pages project list` 显示本项目 `Git Provider = No`，说明 Git 集成已断开（CF 克隆不到仓库，push 后构建会在几秒内瞬间失败、线上不更新），需在 Dashboard → Workers & Pages → vshowcase → Settings → Builds → Git repository 里重连 GitHub。
-**手动发布（Git 集成断开时的可靠路径）**：双击 `tools/deploy.bat`，或 `npx wrangler pages deploy dist --project-name vshowcase`（本机已 `wrangler login` 时可用）。
+
+**自动部署（不依赖面板 Git 集成，推荐）**：仓库自带 `.github/workflows/deploy.yml` —— push 到 main 会自动「装依赖 → 生成内容 → 类型检查 → 测试 → 构建 → wrangler 部署到 Pages」。只需在 GitHub 仓库里配两个 secret：
+`Settings → Secrets and variables → Actions → New repository secret`
+
+| 名称 | 值 |
+| --- | --- |
+| `CLOUDFLARE_API_TOKEN` | CF 账号的 API token（需 Pages:Edit / D1:Edit 权限） |
+| `CLOUDFLARE_ACCOUNT_ID` | CF 账号 id |
+
+secret 没配时该 workflow 自动跳过（不报错），不影响其它流程。
+
+**手动发布（最省事的应急路径）**：双击 `tools/deploy.bat`，或 `npx wrangler pages deploy dist --project-name vshowcase`（本机已 `wrangler login` 时可用）。
 
 验证：`curl -I https://vshowcase.pages.dev/assets/main-*.js` 应 200 且为 JS MIME。
 
@@ -162,6 +173,7 @@ schema.sql      D1 表结构(daily_stats / visitors / likes)
 - [x] 音乐胶囊位置修复(v2.11.1:位置改按「视口比例」记忆而非绝对像素,浏览器缩放/改窗口大小时胶囊不再跑偏、来回缩放也不再往角落漂;缩放时只重算显示坐标不写回记忆值;v1 旧像素坐标自动兼容)
 - [x] 滚动条跟随深浅主题(v2.11.2:全局声明 color-scheme,浏览器原生滚动条/表单控件跟随站点深浅切换(深色下不再是系统浅色亮条);音乐页歌词与歌单改自绘细滚动条,颜色取主题变量自动适配)
 - [x] CI 类型检查修复(v2.11.3:CI 在 typecheck 前先生成 `src/generated/`(构建产物,已 gitignore),否则 `src/site/posts.ts` import `../generated/*.json` 报 TS2307,CI 长期红;README 同步修正部署说明 —— Pages 项目 Git 集成断开时用手动发布)
+- [x] 自动部署工作流(v2.12.0:新增 `.github/workflows/deploy.yml` —— push 到 main 自动「装依赖 → 生成内容 → 类型检查 → 测试 → 构建 → wrangler 部署」,绕开失效的 Pages Git 集成;需在仓库配 `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` 两个 secret,没配则自动跳过)
 - [ ] 设置搭建(站长端深水区:数据源切换 UI)
 
 
