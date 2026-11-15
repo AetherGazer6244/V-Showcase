@@ -467,6 +467,19 @@ onUnmounted(() => {
       <p class="preview-note">预览仅为示意,主页以真实图片效果为准</p>
     </section>
 
+    <section class="settings-group" aria-label="站长工具">
+      <header class="group-head">
+        <span class="group-icon" aria-hidden="true">📊</span>
+        <div class="group-text">
+          <p class="group-name">站长工具</p>
+          <p class="group-sub">访问趋势与点赞排行</p>
+        </div>
+      </header>
+
+      <!-- 统计页有独立的站长密码:进站访客点开会被要求输密码,看不到数据 -->
+      <a class="settings-owner-link" href="/stats.html">打开站长统计 →</a>
+    </section>
+
     <div class="settings-actions">
       <button type="button" class="settings-reset" @click="onReset">恢复默认</button>
       <span class="settings-hint" :class="{ show: hintVisible }">{{ hintText }}</span>

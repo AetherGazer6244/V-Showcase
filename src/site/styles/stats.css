@@ -1,0 +1,315 @@
+/* ============================================================
+ * 站长统计页(v2.13)—— /stats.html
+ * ------------------------------------------------------------
+ * 配色全部走主题变量(--glass-bg / --border / --text-* / --accent),
+ * 深浅主题自动跟随,无需额外配色分支。
+ * ============================================================ */
+
+.stats-header {
+  margin-bottom: 18px;
+}
+
+.stats-main {
+  width: min(1080px, calc(100% - 32px));
+  margin: 0 auto 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ---------- 未解锁:密码卡 ---------- */
+
+.stats-lock {
+  max-width: 420px;
+  margin: 40px auto;
+  padding: 32px 30px 26px;
+  text-align: center;
+}
+
+.stats-lock-title {
+  margin: 0 0 6px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.stats-lock-sub {
+  margin: 0 0 20px;
+  font-size: var(--fs-sm);
+  color: var(--text-sub);
+}
+
+.stats-lock-form {
+  display: flex;
+  gap: 8px;
+}
+
+.stats-lock-input {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-plain);
+  color: var(--text-main);
+  font-size: var(--fs-md);
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stats-lock-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.stats-lock-btn {
+  padding: 11px 20px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--brand-1), var(--brand-2));
+  color: #fff;
+  font-size: var(--fs-md);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+.stats-lock-btn:hover { filter: brightness(1.08); }
+.stats-lock-btn:disabled { filter: grayscale(0.4); cursor: wait; }
+
+.stats-lock-msg {
+  margin: 12px 0 0;
+  min-height: 20px;
+  font-size: var(--fs-sm);
+  color: #dc2626;
+}
+
+/* ---------- 概览卡片 ---------- */
+
+.stats-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 14px;
+}
+
+.stats-card {
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stats-card-label {
+  font-size: var(--fs-sm);
+  color: var(--text-sub);
+}
+
+.stats-card-value {
+  font-size: 1.7rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--text-main);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- 面板 ---------- */
+
+.stats-panel {
+  padding: 20px 22px 22px;
+}
+
+.stats-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.stats-panel-title {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.stats-panel-head .stats-panel-title { margin-bottom: 0; }
+
+.stats-panel-ops {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.stats-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--fs-xs);
+  color: var(--text-sub);
+}
+
+.stats-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+.stats-dot-pv { background: var(--brand-1); }
+.stats-dot-uv { background: var(--brand-2); }
+
+.stats-btn {
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--glass-border);
+  background: transparent;
+  color: var(--text-main);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.stats-btn:hover { background: var(--chip-bg); }
+.stats-btn:disabled { opacity: 0.5; cursor: wait; }
+
+.stats-btn-ghost { color: var(--text-sub); }
+
+/* ---------- 趋势图 ---------- */
+
+.stats-chart {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.stats-chart-svg {
+  display: block;
+  width: 100%;
+  min-width: 100%;
+  height: 130px;
+}
+
+.stats-bar-pv { fill: var(--brand-1); }
+.stats-bar-uv { fill: var(--brand-2); }
+
+.stats-chart-axis {
+  display: flex;
+  gap: 0;
+  margin-top: 6px;
+  font-size: 10px;
+  color: var(--text-sub);
+}
+
+.stats-axis-tick {
+  flex: 1 0 0;
+  min-width: 26px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* ---------- 点赞排行 ---------- */
+
+.stats-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.stats-likes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stats-like {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--fs-sm);
+}
+
+.stats-like-rank {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--chip-bg);
+  color: var(--text-sub);
+  font-size: var(--fs-xs);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stats-like-thumb {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  background: var(--img-bg);
+}
+
+.stats-like-count {
+  margin-left: auto;
+  color: var(--text-main);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- 明细表 ---------- */
+
+.stats-table-wrap {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+}
+
+.stats-table th,
+.stats-table td {
+  padding: 7px 10px;
+  text-align: right;
+  border-bottom: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+
+.stats-table th:first-child,
+.stats-table td:first-child {
+  text-align: left;
+  font-variant-numeric: normal;
+}
+
+.stats-table th {
+  position: sticky;
+  top: 0;
+  background: var(--glass-plain);
+  color: var(--text-sub);
+  font-weight: 600;
+}
+
+.stats-table td { color: var(--text-main); }
+
+.stats-error {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: #dc2626;
+}
+
+/* ---------- 窄屏 ---------- */
+
+@media (max-width: 640px) {
+  .stats-lock-form { flex-direction: column; }
+  .stats-card-value { font-size: 1.4rem; }
+  .stats-chart-axis { display: none; }
+}
