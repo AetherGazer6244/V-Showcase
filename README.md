@@ -174,6 +174,7 @@ schema.sql      D1 表结构(daily_stats / visitors / likes)
 - [x] 滚动条跟随深浅主题(v2.11.2:全局声明 color-scheme,浏览器原生滚动条/表单控件跟随站点深浅切换(深色下不再是系统浅色亮条);音乐页歌词与歌单改自绘细滚动条,颜色取主题变量自动适配)
 - [x] CI 类型检查修复(v2.11.3:CI 在 typecheck 前先生成 `src/generated/`(构建产物,已 gitignore),否则 `src/site/posts.ts` import `../generated/*.json` 报 TS2307,CI 长期红;README 同步修正部署说明 —— Pages 项目 Git 集成断开时用手动发布)
 - [x] 自动部署工作流(v2.12.0:新增 `.github/workflows/deploy.yml` —— push 到 main 自动「装依赖 → 生成内容 → 类型检查 → 测试 → 构建 → wrangler 部署」,绕开失效的 Pages Git 集成;需在仓库配 `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` 两个 secret,没配则自动跳过)
+- [x] 自动部署工作流修复(v2.12.1:密钥判断原先写在 job 级 `if` 里,而 GitHub 的 `secrets` 上下文在该位置不可用,会报「Unrecognized named-value: 'secrets'」,导致整个部署流程 1 秒秒挂;改为在「部署」这一步用 `env` 间接判断 —— 密钥没配时只跳过部署这步,前面的检查/测试/构建照常跑完)
 - [ ] 设置搭建(站长端深水区:数据源切换 UI)
 
 
