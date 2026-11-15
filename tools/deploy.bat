@@ -2,8 +2,10 @@
 REM ============================================================
 REM  V-Showcase deploy - one shot: build + upload to Cloudflare
 REM ------------------------------------------------------------
-REM  Uploads dist/ to the Cloudflare Pages project "vshowcase"
-REM  https://vshowcase.pages.dev
+REM  Uploads dist/ to the Cloudflare Pages project "v-showcase"
+REM  https://v-showcase.pages.dev
+REM  NOTE - wrangler must be logged into the account that owns it:
+REM  a716333dd4ce6b3845a624acce143de2  (npx wrangler whoami to check)
 REM
 REM  Rules for this file - same as site.bat:
 REM    1. MUST be CRLF  -- cmd.exe silently mis-parses LF-only .bat
@@ -18,7 +20,7 @@ setlocal EnableDelayedExpansion
 echo.
 echo ============================================================
 echo   V-Showcase deploy - build + upload to Cloudflare Pages
-echo   https://vshowcase.pages.dev
+echo   https://v-showcase.pages.dev
 echo ============================================================
 echo.
 
@@ -57,7 +59,7 @@ echo       - dist/ is up to date
 REM ---------- [3/3] deploy ----------
 echo [3/3] Uploading to Cloudflare Pages
 echo       - First run downloads wrangler, may take 1-3 minutes
-call npx wrangler pages deploy dist --project-name vshowcase --branch main --commit-dirty=true
+call npx wrangler pages deploy dist --project-name v-showcase --branch main --commit-dirty=true
 if !errorlevel! neq 0 (
   echo [X] Deploy failed.
   echo     - If wrangler asks you to log in, run: npx wrangler login
@@ -69,7 +71,7 @@ if !errorlevel! neq 0 (
 
 echo.
 echo ============================================================
-echo   Done - site updated: https://vshowcase.pages.dev
+echo   Done - site updated: https://v-showcase.pages.dev
 echo ============================================================
 echo.
 pause

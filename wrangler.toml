@@ -1,4 +1,7 @@
-name = "vshowcase"
+# ⚠️ name 必须与真站的 Pages 项目名一致(带横杠)。
+#   真站 = v-showcase.pages.dev,所在 Cloudflare 账号 a716333dd4ce6b3845a624acce143de2。
+#   (曾有个同名的 "vshowcase" 副本站,那是另一个账号里的项目,不是真站。)
+name = "v-showcase"
 compatibility_date = "2024-09-23"
 
 # Cloudflare Pages wrangler.toml — 仅 Pages 兼容字段
@@ -10,10 +13,14 @@ pages_build_output_dir = "./dist"
 # ---- D1 数据库(访客统计 + 图片点赞) ----
 # 绑定信息(npx wrangler d1 create v-showcase-db 生成的真实 id):
 #   ⚠ 占位 id 会让 CF 部署直接失败(2026-10 排查:连续 5 次构建失败即此原因)
-#   如需重建:npx wrangler d1 create v-showcase-db 后把新 id 填到下方 database_id
-#   2026-11 排查:账号里的库又重建过一次,仓库里的旧 id 会让 wrangler pages deploy
-#   的 Functions 上传阶段报「database ... could not be found」—— 报这个错先 npx wrangler d1 list 对 id
+#   ⚠ database_id 是【账号专属】的,换账号必须同步改这里:
+#     · 真站账号 a716333dd4ce6b3845a624acce143de2 → ee58e652-…(下面这个,正确)
+#     · 另一个账号 490caef52685cdaa8074ced99aa90dfa → c5963de3-…
+#     2026-11 排查:仓库里的 id 一度指向了「另一个账号」的库,导致真站
+#     从 a62d46f 起每一次 CF 构建都在「上传 Functions」阶段报
+#     「database ... could not be found」→ 修复(滚动条/胶囊)一直没上线。
+#     报这个错先 npx wrangler d1 list 对 id,确认是哪个账号的库。
 [[d1_databases]]
 binding = "DB"
 database_name = "v-showcase-db"
-database_id = "c5963de3-20fd-439b-8f8b-86a5d3d4ca47"
+database_id = "ee58e652-a085-4c15-99be-1d57b80596f0"

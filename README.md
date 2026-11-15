@@ -53,27 +53,33 @@ Manager「博客 / 音乐 / 项目」Tab 保存即校验并重建产物;「保�
 
 ## 部署
 
-**Cloudflare Pages（Git 集成）**，Dashboard → Pages → Settings：
+> ⚠️ **先认清哪个是真站**：真站是 **`v-showcase.pages.dev`**（带横杠），Cloudflare 账号 `a716333dd4ce6b3845a624acce143de2`。
+> 历史上还建过一个同名的 `vshowcase.pages.dev`（不带横杠），那在**另一个账号**里，是个没人用的副本 —— 往它上面部署对真站毫无影响。
+
+**Cloudflare Pages（Git 集成，首选）**，Dashboard → Workers & Pages → v-showcase → Settings：
 
 1. Builds：Build command `npm run build`，输出目录 `dist`（Git 集成会忽略 wrangler.toml 的构建配置，必须手动设）
-2. 环境变量（Production / Preview 都填）：`QUBU_TOKEN`（Secret，7bu.top token，完整值含竖线）、`SITE_PASSWORD`（Secret，前台整站密码，见下节）、`NODE_VERSION=20`（可选，Node 22 亦可构建）
+2. 环境变量（Production）：`QUBU_TOKEN`（Secret，7bu.top token，完整值含竖线）、`SITE_PASSWORD`（Secret，前台整站密码，见下节）、`NODE_VERSION=20`（可选，Node 22 亦可构建）
 
-推 main 自动部署（**前提**：CF Pages 项目的 Git 集成是连着的）。
-⚠️ 若 `npx wrangler pages project list` 显示本项目 `Git Provider = No`，说明 Git 集成已断开（CF 克隆不到仓库，push 后构建会在几秒内瞬间失败、线上不更新），需在 Dashboard → Workers & Pages → vshowcase → Settings → Builds → Git repository 里重连 GitHub。
+真站的 Git 集成**已连好并开着自动部署**：推 main → CF 自动构建部署。
 
-**自动部署（不依赖面板 Git 集成，推荐）**：仓库自带 `.github/workflows/deploy.yml` —— push 到 main 会自动「装依赖 → 生成内容 → 类型检查 → 测试 → 构建 → wrangler 部署到 Pages」。只需在 GitHub 仓库里配两个 secret：
-`Settings → Secrets and variables → Actions → New repository secret`
+⚠️ **构建失败最常见的原因：`wrangler.toml` 里的 D1 `database_id` 与账号对不上**。
+`database_id` 是**账号专属**的，写错（哪怕只是指向了另一个账号里同名的库）会导致 CF 在「上传 Functions」阶段报
+`database ... could not be found`，**整次构建失败、线上不更新**。当前真站用的库 id 是 `ee58e652-a085-4c15-99be-1d57b80596f0`（账号 a716333…）。
+换账号时先 `npx wrangler d1 list` 对 id，再改 `wrangler.toml`。
+
+**备用部署路线（不依赖面板 Git 集成）**：仓库自带 `.github/workflows/deploy.yml` —— push 到 main 会自动「装依赖 → 生成内容 → 类型检查 → 测试 → 构建 → wrangler 部署」。需要在 GitHub 仓库里配两个 secret（`Settings → Secrets and variables → Actions → New repository secret`）：
 
 | 名称 | 值 |
 | --- | --- |
-| `CLOUDFLARE_API_TOKEN` | CF 账号的 API token（需 Pages:Edit / D1:Edit 权限） |
-| `CLOUDFLARE_ACCOUNT_ID` | CF 账号 id |
+| `CLOUDFLARE_API_TOKEN_VSHOWCASE` | **真站账号**的 API token（需 Pages:Edit / D1:Edit 权限） |
+| `CLOUDFLARE_ACCOUNT_ID_VSHOWCASE` | 真站账号 id `a716333dd4ce6b3845a624acce143de2` |
 
-secret 没配时该 workflow 自动跳过（不报错），不影响其它流程。
+secret 没配时该 workflow 只会跳过部署那一步（不报错），不影响其它流程。
 
-**手动发布（最省事的应急路径）**：双击 `tools/deploy.bat`，或 `npx wrangler pages deploy dist --project-name vshowcase`（本机已 `wrangler login` 时可用）。
+**手动发布（应急）**：`npx wrangler pages deploy dist --project-name v-showcase --branch main`（本机已 `wrangler login` 且登录的是真站账号时可用）。
 
-验证：`curl -I https://vshowcase.pages.dev/assets/main-*.js` 应 200 且为 JS MIME。
+验证：`curl -I https://v-showcase.pages.dev/assets/main-*.js` 应 200 且为 JS MIME。
 
 ### D1（访客统计 + 图片点赞）
 
@@ -175,6 +181,7 @@ schema.sql      D1 表结构(daily_stats / visitors / likes)
 - [x] CI 类型检查修复(v2.11.3:CI 在 typecheck 前先生成 `src/generated/`(构建产物,已 gitignore),否则 `src/site/posts.ts` import `../generated/*.json` 报 TS2307,CI 长期红;README 同步修正部署说明 —— Pages 项目 Git 集成断开时用手动发布)
 - [x] 自动部署工作流(v2.12.0:新增 `.github/workflows/deploy.yml` —— push 到 main 自动「装依赖 → 生成内容 → 类型检查 → 测试 → 构建 → wrangler 部署」,绕开失效的 Pages Git 集成;需在仓库配 `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` 两个 secret,没配则自动跳过)
 - [x] 自动部署工作流修复(v2.12.1:密钥判断原先写在 job 级 `if` 里,而 GitHub 的 `secrets` 上下文在该位置不可用,会报「Unrecognized named-value: 'secrets'」,导致整个部署流程 1 秒秒挂;改为在「部署」这一步用 `env` 间接判断 —— 密钥没配时只跳过部署这步,前面的检查/测试/构建照常跑完)
+- [x] 真站部署链路修复(v2.12.2:⚠️ **真站其实是 `v-showcase.pages.dev`(带横杠),在另一个 Cloudflare 账号 a716333… 里**;仓库的 `wrangler.toml` 里 D1 `database_id` 却指向了另一个账号的库 → 真站从 a62d46f 起每次 CF 构建都在「上传 Functions」阶段报「database could not be found」而失败,滚动条/胶囊两个修复一直没上线。同时把 `wrangler.toml` 的 `name`、`tools/deploy.bat`、Actions 备用部署路线统一指向真站项目,并在 README 里写清「哪个是真站、D1 id 必须与账号对应」)
 - [ ] 设置搭建(站长端深水区:数据源切换 UI)
 
 
