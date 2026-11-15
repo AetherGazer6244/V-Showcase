@@ -257,6 +257,7 @@
 
 /* 代码块:构建期 highlight.js 高亮 */
 .post-prose pre {
+  position: relative;      /* 复制按钮定位用 */
   margin: 1.2em 0;
   padding: 16px 18px;
   border-radius: var(--radius-md);
@@ -271,6 +272,60 @@
   padding: 0;
   font-size: inherit;
   color: inherit;              /* 高亮色由 .hljs-* span 负责,不吃行内芯片 */
+}
+
+/* 代码块「复制」按钮(v2.14):右上角小圆钮,触屏常驻、桌面悬停更醒目 */
+.code-copy-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.1);
+  color: #e6e8eb;
+  font-size: 0.72rem;
+  font-family: inherit;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  opacity: 0.65;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.code-copy-btn:hover,
+.code-copy-btn:focus-visible {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.code-copy-btn.is-done {
+  border-color: rgba(134, 239, 172, 0.5);
+  color: #a3d9a5;
+  opacity: 1;
+}
+
+/* 正文图片:可点击放大(灯箱由 PostView 事件委托接好) */
+.post-prose img {
+  cursor: zoom-in;
+}
+
+/* 阅读进度条(v2.14):页面顶部一条细线 */
+.reading-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 60;
+  background: transparent;
+  pointer-events: none;
+}
+
+.reading-progress-bar {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, var(--brand-1), var(--brand-2));
+  transition: width 0.1s linear;
 }
 
 /* highlight.js 主题(跟随站点主题的琥珀系,构建期只产 span 类名) */

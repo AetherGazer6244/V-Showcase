@@ -196,6 +196,7 @@ schema.sql      D1 表结构(daily_stats / visitors / likes)
 - [x] 自动部署工作流修复(v2.12.1:密钥判断原先写在 job 级 `if` 里,而 GitHub 的 `secrets` 上下文在该位置不可用,会报「Unrecognized named-value: 'secrets'」,导致整个部署流程 1 秒秒挂;改为在「部署」这一步用 `env` 间接判断 —— 密钥没配时只跳过部署这步,前面的检查/测试/构建照常跑完)
 - [x] 真站部署链路修复(v2.12.2:⚠️ **真站其实是 `v-showcase.pages.dev`(带横杠),在另一个 Cloudflare 账号 a716333… 里**;仓库的 `wrangler.toml` 里 D1 `database_id` 却指向了另一个账号的库 → 真站从 a62d46f 起每次 CF 构建都在「上传 Functions」阶段报「database could not be found」而失败,滚动条/胶囊两个修复一直没上线。同时把 `wrangler.toml` 的 `name`、`tools/deploy.bat`、Actions 备用部署路线统一指向真站项目,并在 README 里写清「哪个是真站、D1 id 必须与账号对应」)
 - [x] 站长统计页(v2.13.0:新增 `/stats.html` —— 访问趋势(近 30 天 PV/UV 柱状图 + 每日明细)与点赞排行;除全站密码外再加一把**独立站长密码** `OWNER_PASSWORD`(恒时比较,fail-closed:没配就 503 报错而不是谁都能看),密码只存 sessionStorage;设置页加「站长工具」入口,数据只读不改表结构)
+- [x] 博客阅读体验三件套(v2.14.0:代码块右上角加「复制」按钮(点了变「已复制」,剪贴板 API 不可用时退回 textarea 方案);文章页顶部加阅读进度条(按【正文】位置算,不是整页,文章短也不会一打开就满格);正文图片补「点击放大」提示 —— 灯箱本身 v2.4 就接好了,这次只是补上可点击的视觉提示)
 - [ ] 设置搭建(站长端深水区:数据源切换 UI)
 
 
