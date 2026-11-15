@@ -1,8 +1,15 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { findPost, formatDateCN, postHref } from './posts';
 import { siteConfig } from './siteConfig';
 import { useLightbox } from './composables';
+import ReadingProgress from './ReadingProgress.vue';
+import {
+  enhanceCodeBlocks,
+  markImagesZoomable,
+  computeReadingProgress,
+  type CodeEnhanceHandle,
+} from './postEnhance';
 
 /* slug 来源优先级:
  * 1. 生产环境生成的静态页注入 window.__POST_SLUG__
@@ -50,8 +57,37 @@ function setupTocObserver(): void {
 
 /* ---- 回到顶部 ---- */
 const showTop = ref(false);
+
+/* ---- 阅读进度条(v2.14)----
+ * 进度按【正文元素】算,而不是整页:文章短时不会一打开就 100%。 */
+const proseRef = ref<HTMLElement | null>(null);
+const readingProgress = ref(0);
+
+/** 给正文里的代码块装「复制」按钮、给图片加放大提示 */
+function enhanceProse(): void {
+  const el = proseRef.value;
+  if (!el) return;
+  codeHandle?.destroy();
+  codeHandle = enhanceCodeBlocks(el);
+  markImagesZoomable(el);
+}
+let codeHandle: CodeEnhanceHandle | null = null;
+
+function updateReadingProgress(): void {
+  const el = proseRef.value;
+  if (!el) return;
+  readingProgress.value = computeReadingProgress(el.getBoundingClientRect(), window.innerHeight);
+}
+
+/**
+ * 滚动时直接算进度(不做 rAF/定时器节流):
+ *   代价只是读一次 getBoundingClientRect(单个元素,布局通常已算好),
+ *   换来的是「任何情况下都准」——标签页切到后台时浏览器会暂停 rAF、
+ *   节流 setTimeout,靠它们更新的进度条会冻住不动。
+ */
 function onScroll(): void {
   showTop.value = window.scrollY > 400;
+  updateReadingProgress();
 }
 function backTop(): void {
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -76,7 +112,7 @@ function onArticleClick(e: Event): void {
   if (idx >= 0) lb.open(articleImages.value, idx);
 }
 
-onMounted(() => {
+onMounted(async () => {
   // 未命中 slug(直接访问兜底壳)→ 回列表
   if (!post.value) {
     window.location.replace('blog.html');
@@ -84,20 +120,34 @@ onMounted(() => {
   }
   document.title = `${post.value.title} · V-Showcase`;
   setupTocObserver();
+  await nextTick();
+  enhanceProse();
+  updateReadingProgress();
   window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', onScroll, { passive: true });
   onScroll();
 });
 
 onUnmounted(() => {
   tocObserver?.disconnect();
   window.removeEventListener('scroll', onScroll);
+  window.removeEventListener('resize', onScroll);
+  codeHandle?.destroy();
 });
 
-watch(() => post.value?.slug, () => setupTocObserver());
+watch(() => post.value?.slug, async () => {
+  setupTocObserver();
+  await nextTick();
+  enhanceProse();
+  updateReadingProgress();
+});
 </script>
 
 <template>
   <template v-if="post">
+    <!-- 阅读进度条(v2.14) -->
+    <ReadingProgress :progress="readingProgress" />
+
     <main class="page-header-main post-main">
       <!-- 详情卡:封面卡顶 + 玻璃大卡(v2.4 对齐 Cecilian-Hub) -->
       <article class="post-card panel-card fade-in-up">
@@ -153,6 +203,7 @@ watch(() => post.value?.slug, () => setupTocObserver());
           </details>
 
           <article
+            ref="proseRef"
             class="post-prose"
             @click="onArticleClick"
           ><!-- html 由构建期渲染(marked + highlight.js),可信产物 -->
