@@ -41,6 +41,7 @@ export default defineConfig(({ mode }) => {
               projects: r('./projects.html'),
               about: r('./about.html'),
               settings: r('./settings.html'),
+              stats: r('./stats.html'),
               '404': r('./404.html'),
             },
           },

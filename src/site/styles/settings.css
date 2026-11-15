@@ -426,6 +426,26 @@
   padding: 4px 0 18px;
 }
 
+/* 站长工具入口(统计页;页内有独立站长密码) */
+.settings-owner-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 14px;
+  padding: 9px 16px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--glass-border);
+  color: var(--text-main);
+  font-size: var(--fs-sm);
+  text-decoration: none;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.settings-owner-link:hover {
+  background: var(--chip-bg);
+  border-color: var(--glass-border-strong);
+}
+
 /* 窄屏:行内三列收窄,分组头图标缩小 */
 @media (max-width: 560px) {
   .settings-main { padding: 0 20px 64px; }

@@ -59,7 +59,7 @@ Manager「博客 / 音乐 / 项目」Tab 保存即校验并重建产物;「保�
 **Cloudflare Pages（Git 集成，首选）**，Dashboard → Workers & Pages → v-showcase → Settings：
 
 1. Builds：Build command `npm run build`，输出目录 `dist`（Git 集成会忽略 wrangler.toml 的构建配置，必须手动设）
-2. 环境变量（Production）：`QUBU_TOKEN`（Secret，7bu.top token，完整值含竖线）、`SITE_PASSWORD`（Secret，前台整站密码，见下节）、`NODE_VERSION=20`（可选，Node 22 亦可构建）
+2. 环境变量（Production）：`QUBU_TOKEN`（Secret，7bu.top token，完整值含竖线）、`SITE_PASSWORD`（Secret，前台整站密码，见下节）、`OWNER_PASSWORD`（Secret，站长统计口令，可选，不配则统计页报「未配置」）、`NODE_VERSION=20`（可选，Node 22 亦可构建）
 
 真站的 Git 集成**已连好并开着自动部署**：推 main → CF 自动构建部署。
 
@@ -103,12 +103,25 @@ npm run db:schema:remote           # 建表（本地开发用 db:schema:local）
 - 本地开发：复制 `.dev.vars.example` 为 `.dev.vars`（已 gitignore），填入 `SITE_PASSWORD`
 - 有意接受的副作用：搜索引擎无法收录内页（爬虫只见登录页）；访客统计只统计已登录访客
 
+### 站长统计页（v2.13.0）
+
+`/stats.html` —— 只有站长能看的经营数据（访问趋势 + 点赞排行）。
+
+- **两把锁**：全站密码（`_middleware.js`，进站访客都过得了）之外再加一把**站长密码** `OWNER_PASSWORD`，访客即使拿到站点密码也看不到统计数据
+- **接口**：`GET /api/stats`，请求头带 `x-owner-key: <站长密码>`；恒时比较防猜解（复用 `functions/lib/auth.js`）
+- **fail-closed**：`OWNER_PASSWORD` 未配置 → 接口 503 明确报错，不退化成「谁都能看」
+- **密码只存 sessionStorage**（关标签页即失效），不进 localStorage
+- **数据只读**：`daily_stats`（PV/UV 按天）+ `likes`（点赞数），不改表结构；UV 仍是按 `sha256(IP+UA+日)` 按日轮转，不存原始 IP
+- **配置**：Cloudflare Pages → v-showcase → Settings → Environment variables → 加 `OWNER_PASSWORD`（Secret）→ **重新部署**（面板改环境变量不会自动生效，需重新部署一次）
+- 本地开发：`.dev.vars` 里加 `OWNER_PASSWORD=xxx`（`.dev.vars` 已 gitignore）
+
 ## 注意事项
 
 - 图床代理会并发拉全部分页，图床图片建议控制在 400 张以内
 - Manager 上传会自动做三件事：按真实格式改名、跳过图床里已有的同内容图、传完验一次链接（详见 `tools/README.md` 的「上传管线」）
 - Manager「配置」Tab 保存会整体重写 config.ts，手工注释会丢失；mode/token 不可改
 - 统计/点赞接口无鉴权，个人站可接受；UV 按 `sha256(IP+UA+日)` 按日轮转，不存原始 IP
+- **站长统计例外**：`/api/stats` 要 `OWNER_PASSWORD`（见上节），是全站唯一需要额外口令的接口
 - AI 焦点分析是 merge 不是覆盖，不会清掉手工标注的焦点
 
 ## 本地预览主站
@@ -182,6 +195,7 @@ schema.sql      D1 表结构(daily_stats / visitors / likes)
 - [x] 自动部署工作流(v2.12.0:新增 `.github/workflows/deploy.yml` —— push 到 main 自动「装依赖 → 生成内容 → 类型检查 → 测试 → 构建 → wrangler 部署」,绕开失效的 Pages Git 集成;需在仓库配 `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` 两个 secret,没配则自动跳过)
 - [x] 自动部署工作流修复(v2.12.1:密钥判断原先写在 job 级 `if` 里,而 GitHub 的 `secrets` 上下文在该位置不可用,会报「Unrecognized named-value: 'secrets'」,导致整个部署流程 1 秒秒挂;改为在「部署」这一步用 `env` 间接判断 —— 密钥没配时只跳过部署这步,前面的检查/测试/构建照常跑完)
 - [x] 真站部署链路修复(v2.12.2:⚠️ **真站其实是 `v-showcase.pages.dev`(带横杠),在另一个 Cloudflare 账号 a716333… 里**;仓库的 `wrangler.toml` 里 D1 `database_id` 却指向了另一个账号的库 → 真站从 a62d46f 起每次 CF 构建都在「上传 Functions」阶段报「database could not be found」而失败,滚动条/胶囊两个修复一直没上线。同时把 `wrangler.toml` 的 `name`、`tools/deploy.bat`、Actions 备用部署路线统一指向真站项目,并在 README 里写清「哪个是真站、D1 id 必须与账号对应」)
+- [x] 站长统计页(v2.13.0:新增 `/stats.html` —— 访问趋势(近 30 天 PV/UV 柱状图 + 每日明细)与点赞排行;除全站密码外再加一把**独立站长密码** `OWNER_PASSWORD`(恒时比较,fail-closed:没配就 503 报错而不是谁都能看),密码只存 sessionStorage;设置页加「站长工具」入口,数据只读不改表结构)
 - [ ] 设置搭建(站长端深水区:数据源切换 UI)
 
 

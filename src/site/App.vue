@@ -50,6 +50,7 @@ const views = {
   projects: lazyView(() => import('./ProjectsView.vue')),
   about: lazyView(() => import('./AboutView.vue')),
   settings: lazyView(() => import('./SettingsView.vue')),
+  stats: lazyView(() => import('./StatsView.vue')),
   notfound: lazyView(() => import('./NotFoundView.vue')),
 } as const;
 type ViewKey = keyof typeof views;

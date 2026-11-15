@@ -12,6 +12,7 @@ import './styles/gallery.css';
 import './styles/lightbox.css';
 import './styles/screensaver.css';
 import './styles/settings.css';
+import './styles/stats.css';
 import './styles/post.css';
 import './styles/pages.css';
 import './styles/backdrop.css';

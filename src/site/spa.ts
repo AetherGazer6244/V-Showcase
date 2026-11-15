@@ -27,7 +27,7 @@ import { ref } from 'vue';
 
 export type SpaView =
   | 'home' | 'blog' | 'post' | 'gallery'
-  | 'music' | 'projects' | 'about' | 'settings';
+  | 'music' | 'projects' | 'about' | 'settings' | 'stats';
 
 export interface RouteTarget {
   view: SpaView;
@@ -50,6 +50,7 @@ const SEGMENT_VIEW: Record<string, SpaView> = {
   'music.html': 'music', 'music': 'music',
   'projects.html': 'projects', 'projects': 'projects',
   'settings.html': 'settings', 'settings': 'settings',
+  'stats.html': 'stats', 'stats': 'stats',
   'about.html': 'about', 'about': 'about',
   'post.html': 'post',   // 开发壳:slug 在查询参数
 };
@@ -212,6 +213,7 @@ function warmViewChunks(): void {
     () => import('./ProjectsView.vue'),
     () => import('./AboutView.vue'),
     () => import('./SettingsView.vue'),
+    () => import('./StatsView.vue'),
   ];
   loaders.forEach((load) => { void load().catch(() => undefined); });
 }
