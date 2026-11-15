@@ -1,18 +1,18 @@
 # ============================================================
-# 自动部署 — push 到 main → 测试 → 构建 → 部署到 Cloudflare Pages
+# 备用部署路线 — push 到 main → 测试 → 构建 → 部署到 Cloudflare Pages
 # ------------------------------------------------------------
-# 为什么不用 CF Pages 的 Git 集成:
-#   本项目的 Pages 项目 Git 集成已断开(wrangler pages project list 显示
-#   Git Provider = No),push 后 CF 连仓库都克隆不到,构建几秒内瞬间失败,
-#   线上不更新(2026-11 排查确认,非代码问题)。
-#   本 workflow 走「Direct Upload」路线:CI 自己构建,再用 wrangler 传上去,
-#   完全不依赖面板里的 Git 集成。
+# ⚠️ 首选路线不是这个:真站(v-showcase.pages.dev,CF 账号
+#    a716333dd4ce6b3845a624acce143de2)的 Pages 项目已经连好 Git 集成、
+#    开着自动部署,push 到 main 后 CF 自己构建部署 —— 不用碰本 workflow。
+#
+# 本 workflow 存在的意义:CF 面板那条路万一又断了,还有一条不依赖面板的。
+#   走「Direct Upload」:CI 自己构建,再用 wrangler 传上去。
 #
 # 需要的仓库 secrets(GitHub → Settings → Secrets and variables → Actions):
-#   CLOUDFLARE_API_TOKEN — CF 账号的 API token(有 Pages:Edit / D1:Edit 即可)
-#   CLOUDFLARE_ACCOUNT_ID — CF 账号 id
+#   CLOUDFLARE_API_TOKEN_VSHOWCASE — 真站账号的 API token(Pages:Edit / D1:Edit 即可)
+#   CLOUDFLARE_ACCOUNT_ID_VSHOWCASE — 真站账号 id = a716333dd4ce6b3845a624acce143de2
 #
-# ⚠️ secrets 没配时,「部署」那一步会被跳过(不报错),站点仍可手动发布。
+# ⚠️ secrets 没配时,「部署」那一步会被跳过(不报错),整个 workflow 仍是绿的。
 # ============================================================
 name: Deploy
 
@@ -64,11 +64,11 @@ jobs:
         # env 上下文在 step 级 if 里可用,secrets 直接出现在 if 里则不行。
         if: ${{ env.CLOUDFLARE_API_TOKEN != '' }}
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN_VSHOWCASE }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID_VSHOWCASE }}
         run: |
           npx wrangler@4 pages deploy dist \
-            --project-name vshowcase \
+            --project-name v-showcase \
             --branch main \
             --commit-hash "${{ github.sha }}" \
             --commit-message "${{ github.event.head_commit.message }}"
