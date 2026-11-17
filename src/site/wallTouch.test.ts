@@ -1,34 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
-  normalizeOffset, flingVelocity, isTap, flingStep,
+  flingVelocity, isTap, flingStep,
   DRAG_SLOP, DOUBLE_TAP_MS, FLING_MIN_V,
 } from './wallTouch';
-
-describe('normalizeOffset — 手动位移归一化到 (-period, 0]', () => {
-  it('周期内位移原样保留', () => {
-    expect(normalizeOffset(0, 100)).toBe(0);
-    expect(normalizeOffset(-50, 100)).toBe(-50);
-    expect(normalizeOffset(-99.5, 100)).toBe(-99.5);
-  });
-
-  it('正向溢出折回左侧等价位置', () => {
-    // 30 → 30-100 = -70(内容以 period 为周期,视觉等价)
-    expect(normalizeOffset(30, 100)).toBe(-70);
-    expect(normalizeOffset(230, 100)).toBe(-70);
-    expect(normalizeOffset(100, 100)).toBe(0); // 100%100=0 → 落到 0
-  });
-
-  it('负向深溢出保持周期内', () => {
-    expect(normalizeOffset(-230, 100)).toBe(-30);
-    expect(normalizeOffset(-315, 100)).toBe(-15);
-  });
-
-  it('非法周期返回 0(未布局完时防 NaN)', () => {
-    expect(normalizeOffset(50, 0)).toBe(0);
-    expect(normalizeOffset(50, -10)).toBe(0);
-    expect(normalizeOffset(50, Number.NaN)).toBe(0);
-  });
-});
 
 describe('flingVelocity — 末段速度估算(px/ms)', () => {
   it('两点直除', () => {

@@ -76,6 +76,112 @@ async function flushMicrotasks() {
 }
 
 /* ============================================================
+ * 真滚动(v2.15):流动墙不再用 transform 搬整行
+ * ------------------------------------------------------------
+ * jsdom 没有真实布局:scrollLeft 恒为 0 且赋值无效、scrollWidth 恒 0。
+ * 这里用原型存根造出可滚动的行,才能断言「组件真的在写 scrollLeft」。
+ * ============================================================ */
+describe('HomeView 真滚动(v2.15)', () => {
+  const scrollStore = new WeakMap<HTMLElement, number>();
+  const origScrollLeft = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollLeft');
+  const origScrollWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollWidth');
+  const origClientWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth');
+
+  beforeEach(() => {
+    localStorage.clear();
+    const { settings } = useSettings();
+    settings.value = { ...defaultSettings(), autoRotate: false };
+    scrollStore;   // WeakMap 按元素存,每次挂载都是新元素,无需清空
+    Object.defineProperty(HTMLElement.prototype, 'scrollLeft', {
+      configurable: true,
+      get() { return scrollStore.get(this) ?? 0; },
+      set(v: number) { scrollStore.set(this, v); },
+    });
+    Object.defineProperty(HTMLElement.prototype, 'scrollWidth', {
+      configurable: true,
+      get() { return 4000; },
+    });
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
+      configurable: true,
+      get() { return 800; },
+    });
+  });
+
+  afterEach(() => {
+    if (origScrollLeft) Object.defineProperty(HTMLElement.prototype, 'scrollLeft', origScrollLeft);
+    if (origScrollWidth) Object.defineProperty(HTMLElement.prototype, 'scrollWidth', origScrollWidth);
+    if (origClientWidth) Object.defineProperty(HTMLElement.prototype, 'clientWidth', origClientWidth);
+    vi.restoreAllMocks();
+  });
+
+  /** 挂载 → 触发全部图片加载 → 等墙就绪 */
+  async function mountReady() {
+    const wrapper = mount(HomeView);
+    await flushMicrotasks();
+    for (const img of wrapper.findAll('.card img')) await img.trigger('load');
+    await sleep(1000);   // 越过开屏最短时长 + 让流动跑几帧
+    return wrapper;
+  }
+
+  function readScrollLeft(wrapper: ReturnType<typeof mount>): number {
+    const row = wrapper.findAll('.row')[0];
+    return row ? (row.element as HTMLElement).scrollLeft : -1;
+  }
+
+  it('就绪后行的 scrollLeft 递增(真滚动)', async () => {
+    const wrapper = await mountReady();
+    const a = readScrollLeft(wrapper);
+    await sleep(400);
+    const b = readScrollLeft(wrapper);
+    expect(a).toBeGreaterThanOrEqual(0);
+    expect(b).toBeGreaterThan(a);
+    wrapper.unmount();
+  });
+
+  it('滚动位置是整数像素(不对齐到半像素 → 画面不糊)', async () => {
+    const wrapper = await mountReady();
+    await sleep(300);
+    const sl = readScrollLeft(wrapper);
+    expect(Number.isInteger(sl)).toBe(true);
+    wrapper.unmount();
+  });
+
+  it('DOM 里没有 transform 位移层,内容直接在 .row 里', async () => {
+    const wrapper = await mountReady();
+    expect(wrapper.find('.row-drag').exists()).toBe(false);
+    expect(wrapper.find('.row > .row-track').exists()).toBe(true);
+    wrapper.unmount();
+  });
+
+  it('鼠标悬停该行 → 停住;移开 → 恢复', async () => {
+    const wrapper = await mountReady();
+    const row = wrapper.findAll('.row')[0];
+
+    await row.trigger('pointerenter', { pointerType: 'mouse' });
+    const a = readScrollLeft(wrapper);
+    await sleep(400);
+    const b = readScrollLeft(wrapper);
+    expect(b).toBe(a);
+
+    await row.trigger('pointerleave', { pointerType: 'mouse' });
+    await sleep(400);
+    expect(readScrollLeft(wrapper)).toBeGreaterThan(b);
+    wrapper.unmount();
+  });
+
+  it('动效总开关关 → 墙不滚动', async () => {
+    const { settings } = useSettings();
+    settings.value = { ...defaultSettings(), autoRotate: false, motion: false };
+    const wrapper = mount(HomeView);
+    await flushMicrotasks();
+    for (const img of wrapper.findAll('.card img')) await img.trigger('load');
+    await sleep(1200);
+    expect(readScrollLeft(wrapper)).toBe(0);
+    wrapper.unmount();
+  });
+});
+
+/* ============================================================
  * 加载态提交兜底(2026-11 线上事故回归)
  * ------------------------------------------------------------
  * 事故:窗口被遮挡 / 节能模式下浏览器会挂起 requestAnimationFrame
