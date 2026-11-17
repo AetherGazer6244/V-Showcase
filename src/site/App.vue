@@ -120,7 +120,12 @@ onMounted(() => {
     <button class="error-banner-close" type="button" aria-label="关闭通知" @click="banner.dismiss()">×</button>
   </div>
 
-  <component :is="currentView" :key="viewKey" />
+  <!-- 主页保活(v2.16):只有 HomeView 进 KeepAlive —— 离开主页时整面墙不拆,
+       切回来是「原样秒开」(不重拉名单、不重挂缩略图、不重弹开屏遮罩)。
+       其余视图照旧挂载即用,不进缓存(避免越存越多)。 -->
+  <KeepAlive :include="['HomeView']">
+    <component :is="currentView" :key="viewKey" />
+  </KeepAlive>
 
   <footer class="site-footer">
     <div class="footer-capsule">

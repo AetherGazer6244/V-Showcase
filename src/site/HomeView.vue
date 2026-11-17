@@ -1,5 +1,5 @@
-<script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
+﻿<script setup lang="ts">
+import { ref, computed, watch, onMounted, onUnmounted, onActivated, onDeactivated, nextTick } from 'vue';
 import { loadImages } from '@/shared/apiClient';
 import { shuffle, debounce } from '@/shared/utils';
 import type { Image } from '@/shared/types';
@@ -16,6 +16,9 @@ import {
   copiesForViewport, flowPos, dragPos, flingPos,
   flowDurationSec, periodSpeed,
 } from './wallScroll';
+
+/* 组件名固定:App.vue 用 <KeepAlive include="['HomeView']"> 只保活主页 */
+defineOptions({ name: 'HomeView' });
 
 /* ============================================================
  * 设计要点
@@ -274,6 +277,7 @@ function canRotate(): boolean {
     && !prefersReducedMotion()
     && allLoaded.value
     && !document.hidden
+    && viewActive
     && !isRowHovered()
     && !active
     && heldRows.value.size === 0
@@ -283,13 +287,14 @@ function canRotate(): boolean {
     && !isScreensaverActive();
 }
 
-/** 是否可以安排计时(开关/动画/动效总闸/减少动态效果/卸载) */
+/** 是否可以安排计时(开关/动画/动效总闸/减少动态效果/卸载/已停用) */
 function canScheduleRotate(): boolean {
   return settings.value.autoRotate
     && settings.value.animate
     && settings.value.motion
     && !prefersReducedMotion()
-    && !disposed;
+    && !disposed
+    && viewActive;
 }
 
 /** 重新排下一次轮换(同时把这一窗排定下来并预热,保证预热即将来时的内容) */
@@ -487,13 +492,14 @@ function isRowPaused(r: number): boolean {
   return false;
 }
 
-/** 全局是否允许流动(动画开关/动效总闸/减少动态效果/后台/换班中) */
+/** 全局是否允许流动(动画开关/动效总闸/减少动态效果/后台/换班中/已停用) */
 function canFlow(): boolean {
   return settings.value.animate
     && settings.value.motion
     && !prefersReducedMotion()
     && !document.hidden
     && allLoaded.value
+    && viewActive
     && !swapping.value;
 }
 
@@ -839,7 +845,7 @@ const onResize = debounce(() => {
   invalidateRowPeriods();
   const n = gallery.value.length;
   // 换班中忽略本次 resize,避免与轮换并发两次换班
-  if (disposed || n === 0 || swapping.value) return;
+  if (disposed || !viewActive || n === 0 || swapping.value) return;
   const size = currentWindowSize();
   if (size <= windowItems.value.length) return;
   const plan = planNext();
@@ -854,6 +860,7 @@ function onViewportResize() {
 
 function onVisibilityChange() {
   if (document.hidden) return;
+  if (!viewActive) return;   // 已被 KeepAlive 停用:不在后台干活
   // 后台期间 rAF 停摆,滞留的加载登记回前台立刻冲一次(不等下一帧),
   // 否则「后台打开、切回前台」时墙面可能多等一拍才算就绪
   cancelLoadedFlushRaf();
@@ -893,6 +900,27 @@ function unwatchMotionPref() {
   motionQuery = null;
 }
 
+/** 是否处于「在场」状态:挂载中且未被 KeepAlive 停用 */
+let viewActive = true;
+/** 事件监听是否已挂上(KeepAlive 下 mount/activate 都会来,别重复挂) */
+let listenersOn = false;
+
+function addListeners(): void {
+  if (listenersOn) return;
+  listenersOn = true;
+  window.addEventListener('resize', onResize);
+  window.addEventListener('resize', onViewportResize);
+  document.addEventListener('visibilitychange', onVisibilityChange);
+}
+
+function removeListeners(): void {
+  if (!listenersOn) return;
+  listenersOn = false;
+  window.removeEventListener('resize', onResize);
+  window.removeEventListener('resize', onViewportResize);
+  document.removeEventListener('visibilitychange', onVisibilityChange);
+}
+
 function resetTouchState() {
   flingV.length = rows.value.length;
   flingV.fill(0);
@@ -917,11 +945,10 @@ function onRowLeave(r: number, e: PointerEvent) {
 
 onMounted(async () => {
   disposed = false;
+  viewActive = true;
   openedAt = performance.now();
 
-  window.addEventListener('resize', onResize);
-  window.addEventListener('resize', onViewportResize);
-  document.addEventListener('visibilitychange', onVisibilityChange);
+  addListeners();
   watchMotionPref();
 
   const { images } = await loadImages();
@@ -948,13 +975,33 @@ onMounted(async () => {
   }
 });
 
+/* KeepAlive 停用(离开主页):把后台该停的都停掉 ——
+ * 流动循环、轮换计时、事件监听。组件实例与 DOM 保留在内存里,
+ * 切回来时原样秒开(不重拉名单、不重挂缩略图、不重弹开屏)。 */
+onDeactivated(() => {
+  viewActive = false;
+  stopFlow();
+  if (rotateTimer) { clearTimeout(rotateTimer); rotateTimer = null; }
+  rotationPlan = null;
+  removeListeners();
+});
+
+/* KeepAlive 激活(回到主页):恢复流动与轮换 */
+onActivated(() => {
+  viewActive = true;
+  addListeners();
+  // 离开期间窗口可能变过:刷新视口宽(决定每行渲染几份内容)
+  onViewportResize();
+  startFlow();
+  scheduleRotate();
+});
+
 onUnmounted(() => {
   disposed = true;
+  viewActive = false;
   stopFlow();
   imgFallback.dispose();
-  window.removeEventListener('resize', onResize);
-  window.removeEventListener('resize', onViewportResize);
-  document.removeEventListener('visibilitychange', onVisibilityChange);
+  removeListeners();
   unwatchMotionPref();
   if (safetyTimer) clearTimeout(safetyTimer);
   if (splashTimer) { clearTimeout(splashTimer); splashTimer = null; }
