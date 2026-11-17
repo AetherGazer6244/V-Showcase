@@ -47,15 +47,17 @@
 
 /* ============ 无障碍 ============ */
 @media (prefers-reduced-motion: reduce) {
-  .row-track,
-  .wall.ready .row-track { animation: none; }
+  /* 墙面滚动 v2.15 起改为 JS 真滚动,不再有 CSS 动画;
+     减少动态效果时由 HomeView 的 canFlow() 直接停流动 */
   .card img,
   .lb-btn { transition: none; }
   .card img { opacity: 1; }
 }
 
-/* ============ 动画开关 ============ */
-html[data-anim='off'] .wall.ready .row-track { animation-play-state: paused; }
+/* ============ 动画开关 ============
+ * settings.animate / settings.motion 关 → html[data-anim='off'] / [data-motion='off'],
+ * 墙面滚动由 HomeView 的 canFlow() 判定(旧实现的 CSS animation-play-state
+ * 规则已随 CSS 动画一并移除)。 */
 
 /* ============ 动效总开关 ============
  * settings.motion=off → html[data-motion='off']:

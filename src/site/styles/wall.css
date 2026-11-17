@@ -59,6 +59,10 @@
 /* 揭幕:整幕淡出(转场被 data-motion='off' 全局压制时退化为直接消失,可接受) */
 .wall-splash.is-fading { opacity: 0; }
 
+/* v2.15 真滚动:.row 是滚动容器,内容在 .row-track 里。
+   位置由 JS 每帧写 scrollLeft(整数像素)——
+   旧实现用 CSS transform 动画搬整行,显卡把整行当一张大照片,
+   每帧落在半像素上只能「猜着画」→ 整行发虚;真滚动按物理像素对齐。*/
 .row {
   overflow: hidden;
   padding: var(--row-margin) 0;
@@ -66,16 +70,10 @@
   touch-action: pan-y;
 }
 
-/* 手动位移层 .row-drag:触屏拖动/惯性叠加在 CSS 动画之上(两层 transform 互不干扰)。
-   它本身不写任何 CSS —— 位移由模板内联 style 给出。
-   ⚠ 切勿在这里加 will-change:真正被动画的是 .row-track,
-     挂在这个静止包裹层上会让浏览器白白提升一个不动层,3 行变 6 个嵌套合成层。 */
-
 .row-track {
   display: flex;
   flex: none;
   width: max-content;
-  will-change: transform;
   /* 只过渡 opacity:与 HomeView 的 FADE_MS=400ms 对齐,
      配合 trackStyle() 注入的 transitionDelay 做逐行错峰。
      缺失此行会让 .swapping 变成硬切,且换班期白屏不可点。 */
@@ -90,10 +88,6 @@
   contain-intrinsic-size: var(--card-w, 300px) 230px;
 }
 
-.wall.ready .row-track {
-  animation: vshowcase-scroll 40s linear infinite;
-}
-
 /* 内容轮换:整墙按行错峰淡出,在不可见时替换内容,再淡入 */
 .wall.swapping .row-track {
   opacity: 0;
@@ -104,20 +98,11 @@
 
 .row-track .card { margin-right: var(--row-gap); }
 
-@keyframes vshowcase-scroll {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
-}
-
-/* 触屏:按住中(.is-held)/ 双击暂停(.is-paused) */
+/* 触屏:按住中(.is-held)/ 双击暂停(.is-paused)—— 暂停状态由 JS 判定,
+   CSS 只留类名供调试/样式钩子使用(旧的 animation-play-state 规则已随
+   CSS 动画一并移除)。 */
 .row.is-held .row-track,
-.row.is-paused .row-track { animation-play-state: paused; }
-
-/* 桌面悬停暂停:限定支持 hover 的指针设备,
-   规避触屏 :hover 粘滞(点一下永久暂停)的问题 */
-@media (hover: hover) {
-  .row:hover .row-track { animation-play-state: paused; }
-}
+.row.is-paused .row-track { /* 静止:位置不变,JS 侧不再推进 */ }
 
 /* ============ 卡片与加载态 ============ */
 .card {

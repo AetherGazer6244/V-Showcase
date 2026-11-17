@@ -9,9 +9,13 @@ import { isScreensaverActive } from './screensaver';
 import { createImgFallback } from './imgFallback';
 import { windowSize, nextWindow, prefersReducedMotion, STEP_RATIO } from './wallRotate';
 import {
-  normalizeOffset, flingVelocity, flingStep, isTap,
+  flingVelocity, flingStep, isTap,
   DRAG_SLOP, DOUBLE_TAP_MS, FLING_MIN_V, type MoveSample,
 } from './wallTouch';
+import {
+  copiesForViewport, flowPos, dragPos, flingPos,
+  flowDurationSec, periodSpeed,
+} from './wallScroll';
 
 /* ============================================================
  * 设计要点
@@ -29,10 +33,14 @@ import {
  * 轮换守卫:开屏中/后台/拖拽中/已暂停/灯箱/屏保/动画关闭/系统
  * 减少动态效果 时不触发;换班半秒内忽略点击与 resize。
  *
- * 触屏:.row > .row-drag(手动位移)> .row-track(CSS 动画),
- * 两层 transform 叠加。按住暂停,拖动/惯性以轨道宽 50% 为周期
- * 归一化;双击持久暂停;单击延迟 280ms 开灯箱(给双击留判定窗)。
- * 仅响应 touch 指针,桌面保留 :hover 暂停(styles/wall.css)。
+ * 触屏:.row(滚动容器)> .row-track(内容),真滚动(scrollLeft)推进。
+ * 按住暂停,拖动/惯性直接改滚动位置;双击持久暂停;单击延迟
+ * 280ms 开灯箱(给双击留判定窗)。仅响应 touch 指针,桌面用
+ * :hover 暂停(JS 侧 hoverRows)。
+ *
+ * v2.15 流动方式改为真滚动:旧做法用 transform 把整行当大照片搬,
+ * 显卡每帧落在半像素上只能「猜着画」→ 整行发虚(用户反馈滑动模糊)。
+ * 真滚动按物理像素对齐,始终清晰。
  *
  * 设置:行数/速度来自 useSettings();改行数从当前窗口重建分桶,
  * 不重新请求,loadedUrls 按 url 键记录故状态保留。
@@ -87,9 +95,18 @@ const SPLASH_FADE_MS = 600;
 /** 已就绪(加载成功或失败)的图片,控制淡入(键 = img.url) */
 const loadedUrls = ref(new Set<string>());
 
+/* ---- 真滚动流动(v2.15)----
+ * 每行一个滚动位置 pos ∈ [0, period),period = 一份内容的宽度。
+ * pos 直接写进 .row 的 scrollLeft(整数像素),不进 Vue 响应式:
+ * 每帧只动 DOM,不做组件重渲。 */
+const rowPos: number[] = [];
+/** 每行滚动周期(px)缓存:内容/尺寸变了要作废重测 */
+const rowPeriods: number[] = [];
+/** 鼠标悬停的行(桌面端:hover 暂停流动) */
+const hoverRows = new Set<number>();
+/** 视口宽(响应式:算每行需要几份内容) */
+const viewportW = ref(typeof window !== 'undefined' ? window.innerWidth : 0);
 /* ---- 触屏手动状态 ---- */
-/** 每行手动位移 px(外层 .row-drag 的 translateX) */
-const dragX = ref<number[]>([]);
 /** 手指按住中的行(临时暂停) */
 const heldRows = ref(new Set<number>());
 /** 双击切换的持久暂停行 */
@@ -231,12 +248,17 @@ async function swapTo(items: RowItem[], plan: RotationPlan | null = null): Promi
     ]);
     if (disposed) return;
   }
+  // 换班前记相位:内容换了绝对位置无意义,按相位还原 → 换班不跳
+  const phases = capturePhases();
   windowItems.value = items;
   rows.value = buildRows(items, settings.value.rows);
   resetTouchState();
   await nextTick();
   if (disposed) return;
+  restorePhases(phases);
   swapping.value = false;
+  // 换班期间流动是停的,这里恢复
+  startFlow();
 }
 
 /** 鼠标是否正悬停在某行上(CSS 已据此暂停滚动,轮换也须让路) */
@@ -318,6 +340,8 @@ function applyReady() {
   if (safetyTimer) { clearTimeout(safetyTimer); safetyTimer = null; }
   // 墙就绪后重排一次:此时预热可登记 loadedUrls,换班新卡不淡入闪白
   scheduleRotate();
+  // 流动起来(真滚动)
+  startFlow();
 }
 
 /**
@@ -417,15 +441,24 @@ function onImgError(img: Image) {
   imgFallback.onError(img.url, img.thumb, img.url);
 }
 
-/** allLoaded 后每行内容双份 → CSS translateX(-50%) 无缝循环 */
-const displayRows = computed<RowItem[][]>(() =>
-  allLoaded.value ? rows.value.map((r) => [...r, ...r]) : rows.value,
+/** 每行渲染几份内容(偶数):保证滚动周期覆盖视口,否则回卷点不可达 */
+const rowCopies = computed<number[]>(() =>
+  rows.value.map((r) => copiesForViewport(r.length, settings.value.cardWidth, viewportW.value)),
 );
+
+/** allLoaded 后每行内容渲染成偶数份 → 滚到一个周期处画面与起点一致,无缝回卷 */
+const displayRows = computed<RowItem[][]>(() => {
+  if (!allLoaded.value) return rows.value;
+  return rows.value.map((r, i) => {
+    const n = rowCopies.value[i] ?? 2;
+    const out: RowItem[] = [];
+    for (let c = 0; c < n; c++) for (const it of r) out.push(it);
+    return out;
+  });
+});
 
 function trackStyle(rowIndex: number): Record<string, string> {
   return {
-    animationDirection: rowIndex % 2 === 1 ? 'reverse' : 'normal',
-    animationDuration: ((40 + rowIndex * 6) / settings.value.speed) + 's',
     // 换班时的错峰延迟(波浪);非换班态无 effect
     transitionDelay: (rowIndex * ROW_STAGGER_MS) + 'ms',
   };
@@ -433,6 +466,114 @@ function trackStyle(rowIndex: number): Record<string, string> {
 
 function openLightbox(gi: number) {
   lb.open(gallery.value.map((i) => ({ url: i.url, name: i.name })), gi);
+}
+
+/* ============================================================
+ * 真滚动流动(v2.15)
+ * ------------------------------------------------------------
+ * 每帧把各行的 scrollLeft 往前推一点(整数像素)。
+ * 为什么不用 CSS 动画:transform 动画由显卡把整行当一张大照片搬,
+ * 每帧落在半像素上只能「猜着画」→ 整行发虚;真滚动按物理像素对齐。
+ * ============================================================ */
+let flowRaf: number | null = null;
+let lastFlowT = 0;
+
+/** 一行是否暂停流动(按住/双击/悬停/惯性进行中) */
+function isRowPaused(r: number): boolean {
+  if (heldRows.value.has(r)) return true;
+  if (pausedRows.value.has(r)) return true;
+  if (hoverRows.has(r)) return true;
+  if ((flingV[r] ?? 0) !== 0) return true;   // 惯性期间不叠加自动流动
+  return false;
+}
+
+/** 全局是否允许流动(动画开关/动效总闸/减少动态效果/后台/换班中) */
+function canFlow(): boolean {
+  return settings.value.animate
+    && settings.value.motion
+    && !prefersReducedMotion()
+    && !document.hidden
+    && allLoaded.value
+    && !swapping.value;
+}
+
+/** 启动流动循环(幂等) */
+function startFlow(): void {
+  if (flowRaf != null) return;
+  if (!canFlow()) return;
+  lastFlowT = performance.now();
+  flowRaf = requestAnimationFrame(flowFrame);
+}
+
+/** 停止流动循环 */
+function stopFlow(): void {
+  if (flowRaf == null) return;
+  if (typeof cancelAnimationFrame === 'function') cancelAnimationFrame(flowRaf);
+  flowRaf = null;
+}
+
+/** 流动主循环:推进各行滚动位置 */
+function flowFrame(now: number): void {
+  flowRaf = null;
+  // 帧间隔上限 1s:浏览器在后台标签页会把 rAF 降频到 ~1 帧/秒,
+  // 若按 64ms 封顶,墙会越走越慢(相位落后于真实时间);
+  // 放宽到 1s 后每次推进「真实流逝的时间」→ 与旧 CSS 动画一样按墙上时钟走。
+  const dt = Math.max(4, Math.min(1000, now - lastFlowT));
+  lastFlowT = now;
+  // 条件不满足就停摆(不再排下一帧):省电,也避免后台空转
+  if (!canFlow()) return;
+  for (let r = 0; r < rowEls.length; r++) {
+    if (isRowPaused(r)) continue;
+    const el = rowEls[r];
+    if (!el) continue;
+    const period = rowPeriod(r);
+    if (period <= 0) continue;
+    // 偶数行向左走(内容左移 = scrollLeft 增大),奇数行反向
+    const dir = r % 2 === 1 ? -1 : 1;
+    const speed = periodSpeed(period, flowDurationSec(r, settings.value.speed));
+    const next = flowPos(rowPos[r] ?? 0, period, dir, speed, dt);
+    if (next === (rowPos[r] ?? 0)) continue;
+    rowPos[r] = next;
+    el.scrollLeft = Math.round(next);
+  }
+  flowRaf = requestAnimationFrame(flowFrame);
+}
+
+/** 把某行的滚动位置写进 DOM(整数像素) */
+function applyRowPos(r: number, pos: number): void {
+  rowPos[r] = pos;
+  const el = rowEls[r];
+  if (el) el.scrollLeft = Math.round(pos);
+}
+
+/** 位置复位:内容/尺寸变了,旧位置无意义,回到起点 */
+function resetPositions(): void {
+  rowPos.length = 0;
+  for (let r = 0; r < rowEls.length; r++) {
+    const el = rowEls[r];
+    if (el) el.scrollLeft = 0;
+  }
+}
+
+/** 记录各行相位(位置 / 周期) */
+function capturePhases(): number[] {
+  return rowEls.map((_, r) => {
+    const period = rowPeriod(r);
+    return period > 0 ? (rowPos[r] ?? 0) / period : 0;
+  });
+}
+
+/** 按相位还原位置:内容换了,绝对位置无意义,相位才是连续的
+ *  (换班不跳:旧实现靠 CSS 动画相位连续,这里用比例还原等价) */
+function restorePhases(phases: number[]): void {
+  for (let r = 0; r < rowEls.length; r++) {
+    const el = rowEls[r];
+    if (!el) continue;
+    const period = rowPeriod(r);
+    const pos = period > 0 ? (phases[r] ?? 0) * period : 0;
+    rowPos[r] = pos;
+    el.scrollLeft = Math.round(pos);
+  }
 }
 
 /* ============================================================
@@ -454,7 +595,7 @@ interface ActiveDrag {
   dragging: boolean;
   samples: MoveSample[];
   period: number;
-  /** 距上一帧累计的位移,由 rAF 统一落到 dragX(见 onRowMove) */
+  /** 距上一帧累计的位移,由 rAF 统一落到滚动位置(见 onRowMove) */
   pendingDx: number;
 }
 let active: ActiveDrag | null = null;
@@ -472,31 +613,25 @@ const flingV: number[] = [];
 let rafId: number | null = null;
 let lastFrameT = 0;
 
-/** 轨道一份内容宽的缓存(scrollWidth 是双份)。
+/** 行一份内容的宽度缓存(= 滚动周期,px)。
  *
- *  ⚠ scrollWidth 读取会强制同步重排,绝不能放进 flingFrame 这类
- *    每帧循环(最多 6 行 × 60 帧 = 每秒 360 次强制布局)。
+ *  ⚠ scrollWidth 读取会强制同步重排,绝不能放进每帧循环
+ *    (最多 6 行 × 60 帧 = 每秒 360 次强制布局)。
  *    这里改成:内容或尺寸变化后把缓存清空,下次用到时量一次并落缓存。 */
-const rowPeriods: number[] = [];
-
 function rowPeriod(r: number): number {
   const cached = rowPeriods[r];
   if (cached) return cached;
+  const copies = rowCopies.value[r] ?? 2;
   const track = rowEls[r]?.querySelector('.row-track');
   const w = track instanceof HTMLElement ? track.scrollWidth : 0;
-  rowPeriods[r] = w / 2;
+  // 轨道 = 若干份相同内容 → 一份宽(= 滚动周期) = 总宽 / 份数
+  rowPeriods[r] = copies >= 2 ? w / copies : w;
   return rowPeriods[r];
 }
 
 /** 内容/尺寸变化后作废缓存(下次读取会重新量) */
 function invalidateRowPeriods(): void {
   rowPeriods.length = 0;
-}
-
-function setDragX(r: number, x: number) {
-  const next = dragX.value.slice();
-  next[r] = x;
-  dragX.value = next;
 }
 
 function addHeld(r: number) {
@@ -533,8 +668,8 @@ function onRowDown(r: number, e: PointerEvent) {
   addHeld(r);
 }
 
-/** 高采样率鼠标/触屏的 pointermove 可达每秒数百次,每次都写 dragX 就是
- *  每秒几百次组件级重渲。改为只累计位移,拖拽渲染合并到每帧一次。 */
+/** 高采样率鼠标/触屏的 pointermove 可达每秒数百次,每次都写位置就是
+ *  每秒几百次 DOM 写。改为只累计位移,拖拽渲染合并到每帧一次。 */
 let dragRaf: number | null = null;
 
 function applyDragFrame() {
@@ -542,7 +677,10 @@ function applyDragFrame() {
   if (!active || !active.dragging || active.pendingDx === 0) return;
   const dx = active.pendingDx;
   active.pendingDx = 0;
-  setDragX(active.row, normalizeOffset((dragX.value[active.row] ?? 0) + dx, active.period));
+  const r = active.row;
+  const period = active.period || rowPeriod(r);
+  // 手指右移 → 内容跟着右移 → 滚动位置左移
+  applyRowPos(r, dragPos(rowPos[r] ?? 0, period, dx));
 }
 
 function onRowMove(e: PointerEvent) {
@@ -576,7 +714,9 @@ function onRowUp(e: PointerEvent) {
 
   // 松手前把还没落到帧上的剩余位移补齐,否则惯性从旧位置起跳会回跳一小段
   if (active.pendingDx !== 0) {
-    setDragX(active.row, normalizeOffset((dragX.value[active.row] ?? 0) + active.pendingDx, active.period));
+    const r = active.row;
+    const period = active.period || rowPeriod(r);
+    applyRowPos(r, dragPos(rowPos[r] ?? 0, period, active.pendingDx));
     active.pendingDx = 0;
   }
 
@@ -634,9 +774,12 @@ function flingFrame(now: number) {
     flingV[r] = nv;
     if (nv === 0) continue;
     moving = true;
-    setDragX(r, normalizeOffset((dragX.value[r] ?? 0) + dx, rowPeriod(r)));
+    // 惯性方向跟着手指:内容跟手走 → 滚动位置反向
+    applyRowPos(r, flingPos(rowPos[r] ?? 0, rowPeriod(r), dx));
   }
   rafId = moving ? requestAnimationFrame(flingFrame) : null;
+  // 惯性结束 → 自动流动可以恢复(惯性期间该行是被跳过的)
+  if (!moving) startFlow();
 }
 
 /** 卡片点击入口:拖拽手势后的合成 click 不开灯箱;
@@ -672,8 +815,22 @@ watch(
   () => scheduleRotate(),
 );
 
+/* 动画开关/动效总闸/流速变更 → 流动循环要跟着停/启(速度下一帧自然生效) */
+watch(
+  [() => settings.value.animate, () => settings.value.motion, () => settings.value.speed],
+  () => {
+    if (canFlow()) startFlow(); else stopFlow();
+  },
+);
+
 /* 卡片宽度变更 → 窗口「填满一屏」下限可能变化,重算并要求补足 */
 watch(() => settings.value.cardWidth, () => onResize());
+
+/* 内容/份数变了 → 位置与周期都要重置(旧位置在新内容里无意义) */
+watch(displayRows, () => {
+  invalidateRowPeriods();
+  resetPositions();
+}, { flush: 'post' });
 
 /** 视口变化:仅当窗口需「变宽补卡」时重建(避免循环露白);防抖 */
 const onResize = debounce(() => {
@@ -690,6 +847,11 @@ const onResize = debounce(() => {
   void swapTo(commitPlan(plan));
 }, 300);
 
+/** 视口宽度变化(立即生效,不用等防抖):决定每行要渲染几份内容 */
+function onViewportResize() {
+  viewportW.value = window.innerWidth;
+}
+
 function onVisibilityChange() {
   if (document.hidden) return;
   // 后台期间 rAF 停摆,滞留的加载登记回前台立刻冲一次(不等下一帧),
@@ -699,11 +861,14 @@ function onVisibilityChange() {
   flushLoaded();
   // 回到前台时重置轮换计时(后台不计时),并刷新下一窗预热
   scheduleRotate();
+  // 流动循环在后台会自己停摆,回前台要重新起
+  startFlow();
 }
 
-/** 系统「减少动态效果」开关变化 → 立刻停/启轮换 */
+/** 系统「减少动态效果」开关变化 → 立刻停/启轮换与流动 */
 function onMotionPrefChange() {
   scheduleRotate();
+  if (canFlow()) startFlow(); else stopFlow();
 }
 
 /** 订阅减少动态效果变化(旧版 Safari 只有 addListener) */
@@ -729,13 +894,25 @@ function unwatchMotionPref() {
 }
 
 function resetTouchState() {
-  dragX.value = rows.value.map(() => 0);
   flingV.length = rows.value.length;
   flingV.fill(0);
   heldRows.value = new Set();
   pausedRows.value = new Set();
+  hoverRows.clear();
   invalidateRowPeriods();
+  resetPositions();
   if (rafId != null) { cancelAnimationFrame(rafId); rafId = null; }
+}
+
+/** 桌面端:hover 暂停该行流动(旧实现是 CSS :hover 规则,改为 JS 判定) */
+function onRowEnter(r: number, e: PointerEvent) {
+  if (e.pointerType === 'touch') return;   // 触屏没有真 hover
+  hoverRows.add(r);
+}
+
+function onRowLeave(r: number, e: PointerEvent) {
+  if (e.pointerType === 'touch') return;
+  hoverRows.delete(r);
 }
 
 onMounted(async () => {
@@ -743,6 +920,7 @@ onMounted(async () => {
   openedAt = performance.now();
 
   window.addEventListener('resize', onResize);
+  window.addEventListener('resize', onViewportResize);
   document.addEventListener('visibilitychange', onVisibilityChange);
   watchMotionPref();
 
@@ -772,8 +950,10 @@ onMounted(async () => {
 
 onUnmounted(() => {
   disposed = true;
+  stopFlow();
   imgFallback.dispose();
   window.removeEventListener('resize', onResize);
+  window.removeEventListener('resize', onViewportResize);
   document.removeEventListener('visibilitychange', onVisibilityChange);
   unwatchMotionPref();
   if (safetyTimer) clearTimeout(safetyTimer);
@@ -816,30 +996,32 @@ onUnmounted(() => {
       @pointermove="onRowMove"
       @pointerup="onRowUp"
       @pointercancel="onRowUp"
+      @pointerenter="onRowEnter(r, $event)"
+      @pointerleave="onRowLeave(r, $event)"
     >
-      <div class="row-drag" :style="{ transform: `translateX(${dragX[r] ?? 0}px)` }">
-        <div class="row-track" :style="trackStyle(r)">
-          <figure
-            v-for="(item, j) in row"
-            :key="`${r}-${item.gi}-${j < row.length / 2 ? 'a' : 'b'}`"
-            class="card"
-            :data-index="item.gi"
-            @click="onCardClick(item.gi)"
-          >
-            <div class="img-box" :class="orientClass(item.img.url)">
-              <img
-                :src="srcOverrides.get(item.img.url) ?? item.img.thumb"
-                :alt="item.img.name || '图片'"
-                :style="focalStyle(item.img.url)"
-                :class="{ 'is-loaded': loadedUrls.has(item.img.url) }"
-                loading="eager"
-                decoding="async"
-                @load="onImgDone(item.img)"
-                @error="onImgError(item.img)"
-              >
-            </div>
-          </figure>
-        </div>
+      <!-- 真滚动(v2.15):.row 是滚动容器,内容在 .row-track 里;
+           滚动位置由 JS 每帧写 scrollLeft(整数像素)→ 画面不糊 -->
+      <div class="row-track" :style="trackStyle(r)">
+        <figure
+          v-for="(item, j) in row"
+          :key="`${r}-${item.gi}-${j}`"
+          class="card"
+          :data-index="item.gi"
+          @click="onCardClick(item.gi)"
+        >
+          <div class="img-box" :class="orientClass(item.img.url)">
+            <img
+              :src="srcOverrides.get(item.img.url) ?? item.img.thumb"
+              :alt="item.img.name || '图片'"
+              :style="focalStyle(item.img.url)"
+              :class="{ 'is-loaded': loadedUrls.has(item.img.url) }"
+              loading="eager"
+              decoding="async"
+              @load="onImgDone(item.img)"
+              @error="onImgError(item.img)"
+            >
+          </div>
+        </figure>
       </div>
     </div>
   </main>

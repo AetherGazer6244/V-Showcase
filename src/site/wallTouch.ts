@@ -1,9 +1,9 @@
 /* ============================================================
  * 流动墙触屏手势 — 纯函数集(便于单测,无 Vue/DOM 依赖)
  * ------------------------------------------------------------
- * 坐标系:行轨道内容渲染为双份(displayRows),CSS 动画从
- * translateX(0) → translateX(-50%) 无缝循环。手动位移叠加在
- * 外层 .row-drag 上,同样以 -50% 轨道宽度为一个视觉周期。
+ * 坐标系:v2.15 起流动墙改「真滚动」(scrollLeft),位置归一化与
+ * 回卷规则见 wallScroll.ts(wrapPos / dragPos);这里只留手势判定
+ * 与惯性衰减。
  * ============================================================ */
 
 /** 一次移动采样(横向位置 px + 时间戳 ms) */
@@ -18,19 +18,6 @@ export const DRAG_SLOP = 8;
 export const DOUBLE_TAP_MS = 300;
 /** 惯性触发阈值(|v| px/ms) */
 export const FLING_MIN_V = 0.15;
-
-/**
- * 把手动位移归一化到 (-period, 0] 区间。
- * period = 轨道宽度的一半(一份内容宽)。任何位移都等价映射进
- * 一个视觉周期内,保证拖出边界时画面依然是连续内容。
- * 非法宽度(未布局完等)返回 0。
- */
-export function normalizeOffset(offset: number, period: number): number {
-  if (!Number.isFinite(period) || period <= 0) return 0;
-  let x = offset % period;
-  if (x > 0) x -= period;
-  return x;
-}
 
 /**
  * 从移动采样序列估算松手瞬间速度(px/ms)。
