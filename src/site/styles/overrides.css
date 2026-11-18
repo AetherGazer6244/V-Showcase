@@ -14,9 +14,8 @@
   .gallery-hero { padding: 60px 40px 40px; }
   .hero-title   { font-size: 3rem; }
 
-  /* 图集网格桌面端固定 4 列(见 gallery.css):中等屏幕改 3 列,
-     否则 4 个会被压得太窄(原来 minmax(280px) 的下限没了,得补这一步)。
-     gap 56px:两摞歪照片各自伸出量之和约 40px+,小于它就会压到一起 */
+  /* 图集网格桌面端固定 3 列(见 gallery.css):中等屏幕同样 3 列,
+     但卡片小 → 歪照片伸得少,间距可以收紧一点(56px) */
   .gallery-grid { grid-template-columns: repeat(3, 1fr); gap: 56px; }
 }
 

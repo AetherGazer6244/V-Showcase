@@ -83,24 +83,24 @@
   padding: 0 60px 80px;
 }
 
-/* 图集网格:桌面端固定每行 4 个。
+/* 图集网格:桌面端固定每行 3 个。
  * 旧写法 auto-fill + minmax(280px,1fr) 是「浮动列数」——宽屏会算出 6 列,
  * 图集数量少时卡片全挤在左边一坨,右侧空一片(用户反馈:过于集中)。
- * 固定 4 列后卡片更大更疏,一行 4 个正好。
- * 中等屏幕见 overrides.css 的 ≤1100px 断点(改 3 列)。
- * max-width:超宽屏(2K/4K)别把 4 张卡撑成巨幅海报,居中收窄即可。
+ * 固定 3 列后卡片大了一倍多,照片看得清。
+ * 中等屏幕见 overrides.css 的 ≤1100px 断点(3 列、更紧的间距)。
+ * max-width:超宽屏(2K/4K)别把 3 张卡撑成巨幅海报,居中收窄即可。
  *
- * ⚠ gap 为什么这么大(64px):
+ * ⚠ gap 为什么这么大(72px):
  *   拍立得的三层照片是「旋转 + 错位」摆的,每层都会伸出卡片格子外面
  *   ——底层照片转 6° 并右移 16px,大约伸出右侧 28px;中层照片反向伸出
- *   左侧 17px。间距小于两边伸出量之和(约 45px)时,相邻两摞照片会
- *   直接压在对方身上,一行下来糊成一堆(用户反馈:图集挤在了一起)。
- *   64px = 静态摆位放得下,悬停张开(伸得更远)也基本不碰。 */
+ *   左侧 17px。间距小于两边伸出量之和时,相邻两摞照片会直接压在对方
+ *   身上,一行下来糊成一堆(用户反馈:图集挤在了一起)。
+ *   卡越大伸得越多(伸出量 ∝ 卡宽),所以 3 列时间距要跟着涨到 72px。 */
 .gallery-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 64px;
-  max-width: 1600px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 72px;
+  max-width: 1920px;
   margin: 0 auto;
 }
 
@@ -191,7 +191,7 @@
  *   否则悬停时照片会压到相邻两摞上(实测桌面 4 列时仍会交叠 ~2px)。 */
 .gallery-card:hover .gallery-stack-layer.back2,
 .gallery-card:focus-visible .gallery-stack-layer.back2 {
-  transform: rotate(9deg) translate(24px, 16px);
+  transform: rotate(9deg) translate(20px, 14px);
   opacity: 0.7;
 }
 .gallery-card:hover .gallery-stack-layer.back1,
