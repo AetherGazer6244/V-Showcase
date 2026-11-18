@@ -83,10 +83,18 @@
   padding: 0 60px 80px;
 }
 
+/* 图集网格:桌面端固定每行 4 个。
+ * 旧写法 auto-fill + minmax(280px,1fr) 是「浮动列数」——宽屏会算出 6 列,
+ * 图集数量少时卡片全挤在左边一坨,右侧空一片(用户反馈:过于集中)。
+ * 固定 4 列后卡片更大更疏,一行 4 个正好。
+ * 中等屏幕见 overrides.css 的 ≤1100px 断点(改 3 列)。
+ * max-width:超宽屏(2K/4K)别把 4 张卡撑成巨幅海报,居中收窄即可。 */
 .gallery-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 32px;
+  max-width: 1600px;
+  margin: 0 auto;
 }
 
 /* 拍立得叠层卡片(v2.3 对齐 Cecilian-Hub photowall):
