@@ -88,11 +88,18 @@
  * 图集数量少时卡片全挤在左边一坨,右侧空一片(用户反馈:过于集中)。
  * 固定 4 列后卡片更大更疏,一行 4 个正好。
  * 中等屏幕见 overrides.css 的 ≤1100px 断点(改 3 列)。
- * max-width:超宽屏(2K/4K)别把 4 张卡撑成巨幅海报,居中收窄即可。 */
+ * max-width:超宽屏(2K/4K)别把 4 张卡撑成巨幅海报,居中收窄即可。
+ *
+ * ⚠ gap 为什么这么大(64px):
+ *   拍立得的三层照片是「旋转 + 错位」摆的,每层都会伸出卡片格子外面
+ *   ——底层照片转 6° 并右移 16px,大约伸出右侧 28px;中层照片反向伸出
+ *   左侧 17px。间距小于两边伸出量之和(约 45px)时,相邻两摞照片会
+ *   直接压在对方身上,一行下来糊成一堆(用户反馈:图集挤在了一起)。
+ *   64px = 静态摆位放得下,悬停张开(伸得更远)也基本不碰。 */
 .gallery-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 32px;
+  gap: 64px;
   max-width: 1600px;
   margin: 0 auto;
 }
@@ -107,7 +114,14 @@
   cursor: pointer;
   background: none;
   border: none;
+  /* 网格子项可直接用 z-index(不必 position)。
+   * 每张卡提为一个层叠上下文后,悬停时整摞提到最上层,
+   * 张开的照片不会被隔壁卡的歪照片盖住。 */
+  z-index: 1;
 }
+
+.gallery-card:hover,
+.gallery-card:focus-visible { z-index: 30; }
 
 :root[data-theme='dark'] .gallery-card { --polaroid-edge: #2b2f38; }
 
@@ -121,7 +135,9 @@
   position: relative;
   width: 100%;
   aspect-ratio: 4 / 3;
-  margin-bottom: 26px;
+  /* 底部留白要够歪照片往下伸(约 w×sin6°/2 + 10px ≈ 26px),
+     否则照片会压到下面的标题文字上 */
+  margin-bottom: 36px;
 }
 
 .gallery-stack-layer {
@@ -170,15 +186,17 @@
 }
 .gallery-stack-layer.front img.is-loaded { opacity: 1; }
 
-/* hover:层片张开 + 前层浮起 */
+/* hover:层片张开 + 前层浮起
+ * ⚠ 张开幅度是「伸到隔壁卡地盘里」的距离,收着用(9°/24px),
+ *   否则悬停时照片会压到相邻两摞上(实测桌面 4 列时仍会交叠 ~2px)。 */
 .gallery-card:hover .gallery-stack-layer.back2,
 .gallery-card:focus-visible .gallery-stack-layer.back2 {
-  transform: rotate(12deg) translate(34px, 22px);
+  transform: rotate(9deg) translate(24px, 16px);
   opacity: 0.7;
 }
 .gallery-card:hover .gallery-stack-layer.back1,
 .gallery-card:focus-visible .gallery-stack-layer.back1 {
-  transform: rotate(-6deg) translate(-28px, -16px);
+  transform: rotate(-5deg) translate(-20px, -12px);
   opacity: 0.9;
 }
 .gallery-card:hover .gallery-stack-layer.front,
