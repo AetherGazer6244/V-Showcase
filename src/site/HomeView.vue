@@ -16,6 +16,11 @@ import {
   copiesForViewport, flowPos, dragPos, flingPos,
   flowDurationSec, periodSpeed,
 } from './wallScroll';
+import {
+  shouldUpgradeHd, needsHdUpgrade, pickHdSrc,
+  HD_PRELOAD_TIMEOUT_MS, HD_MAX_UPGRADES,
+  type ConnInfo,
+} from './wallHd';
 
 /* 组件名固定:App.vue 用 <KeepAlive include="['HomeView']"> 只保活主页 */
 defineOptions({ name: 'HomeView' });
@@ -97,6 +102,22 @@ const splashFading = ref(false);
 const SPLASH_FADE_MS = 600;
 /** 已就绪(加载成功或失败)的图片,控制淡入(键 = img.url) */
 const loadedUrls = ref(new Set<string>());
+
+/* ---- 闲时升级原画(v2.17)----
+ * 墙先用 600w 缩略图开屏;就绪后,只对真正出现在屏幕上的卡片,
+ * 一张一张在后台预载原图,载好即换(原图进缓存,换 src 不闪)。
+ * 省流模式/2G 不升级;失败保持缩略图;单次会话有张数上限。 */
+const hdReady = ref(new Set<string>());
+/** 已排队/已尝试过的 url(同一张不重复排队) */
+const hdTried = new Set<string>();
+/** 待升级队列(先进先出) */
+let hdQueue: Image[] = [];
+/** 正在预载(并发恒为 1,不跟正常浏览抢带宽) */
+let hdBusy = false;
+/** 已成功升级的张数(会话上限用) */
+let hdUpgraded = 0;
+/** 可见性观察器:只有真正进入视口的卡片才排队 */
+let hdObserver: IntersectionObserver | null = null;
 
 /* ---- 真滚动流动(v2.15)----
  * 每行一个滚动位置 pos ∈ [0, period),period = 一份内容的宽度。
@@ -262,6 +283,8 @@ async function swapTo(items: RowItem[], plan: RotationPlan | null = null): Promi
   swapping.value = false;
   // 换班期间流动是停的,这里恢复
   startFlow();
+  // 换了一批卡片 → 重新观察(新卡进视口才会排队升级原画)
+  refreshHdObserver();
 }
 
 /** 鼠标是否正悬停在某行上(CSS 已据此暂停滚动,轮换也须让路) */
@@ -347,6 +370,8 @@ function applyReady() {
   scheduleRotate();
   // 流动起来(真滚动)
   startFlow();
+  // 就绪后再谈升级原画:别跟开屏抢带宽
+  refreshHdObserver();
 }
 
 /**
@@ -444,6 +469,139 @@ function onImgDone(img: Image) {
 function onImgError(img: Image) {
   onImgDone(img);
   imgFallback.onError(img.url, img.thumb, img.url);
+}
+
+/* ============================================================
+ * 闲时升级原画(v2.17)
+ * ------------------------------------------------------------
+ * 判定在 wallHd.ts(纯逻辑,可单测);这里只管 DOM 编排:
+ * 观察 → 排队 → 预载 → 换 src。
+ * ============================================================ */
+
+/** url → Image(按 url 找回 thumb;图集/焦点查表也按 url 命中) */
+const imgByUrl = computed(() => new Map(gallery.value.map((i) => [i.url, i])));
+
+/** 墙容器(模板 ref):观察器只在墙里找卡片 */
+const wallEl = ref<HTMLElement | null>(null);
+
+/** 当前网络状况(Chromium/Android 有;其他浏览器 undefined) */
+function hdConnection(): ConnInfo | null {
+  const nav = navigator as Navigator & { connection?: ConnInfo };
+  return nav.connection ?? null;
+}
+
+/** 是否允许升级(省流模式/2G → 否) */
+function hdAllowed(): boolean {
+  return shouldUpgradeHd(hdConnection());
+}
+
+/** 现在能不能跑升级(后台/换班/停用/卸载 → 暂停) */
+function canHdRun(): boolean {
+  return !disposed && viewActive && !document.hidden && !swapping.value;
+}
+
+/** 卡片该显示哪张:已升级的原图,否则缩略图(坏图回退地址优先) */
+function cardSrc(img: Image): string {
+  return pickHdSrc(
+    img.url,
+    img.thumb,
+    hdReady.value.has(img.url),
+    srcOverrides.value.get(img.url),
+  );
+}
+
+/** 预载一张原图:成功 true / 失败或超时 false */
+function preloadHd(url: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const im = new Image();
+    let settled = false;
+    const finish = (ok: boolean) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      im.onload = null;
+      im.onerror = null;
+      resolve(ok);
+    };
+    const timer = setTimeout(() => finish(false), HD_PRELOAD_TIMEOUT_MS);
+    im.onload = () => finish(true);
+    im.onerror = () => finish(false);
+    im.src = url;
+  });
+}
+
+/** 队列推进:一次只预载一张;失败也继续下一张 */
+async function hdPump(): Promise<void> {
+  if (hdBusy) return;
+  hdBusy = true;
+  try {
+    while (hdQueue.length > 0) {
+      if (!canHdRun()) return;   // 暂停(后台/换班/停用):队列留着,回来再续
+      if (hdUpgraded >= HD_MAX_UPGRADES) { hdQueue.length = 0; return; }
+      const img = hdQueue.shift();
+      if (!img) break;
+      const ok = await preloadHd(img.url);
+      if (ok && !disposed) {
+        hdUpgraded += 1;
+        const next = new Set(hdReady.value);
+        next.add(img.url);
+        hdReady.value = next;
+      }
+    }
+  } finally {
+    hdBusy = false;
+  }
+}
+
+/** 排队一张图(去重 + 值不值得升级 + 网关) */
+function hdEnqueue(img: Image): void {
+  if (!hdAllowed()) return;
+  if (!needsHdUpgrade(img.url, img.thumb)) return;   // 本来就是原图
+  if (hdTried.has(img.url)) return;
+  hdTried.add(img.url);
+  hdQueue.push(img);
+  void hdPump();
+}
+
+/** 卡片进入视口 → 排队升级 */
+function onHdVisible(entries: IntersectionObserverEntry[]): void {
+  for (const e of entries) {
+    if (!e.isIntersecting) continue;
+    const el = e.target as HTMLElement;
+    const url = el.dataset.hdUrl || '';
+    const img = url ? imgByUrl.value.get(url) : undefined;
+    if (img) hdEnqueue(img);
+  }
+}
+
+/** 挂上观察器(墙就绪/换班后重新观察新卡片) */
+function setupHdObserver(): void {
+  teardownHdObserver();
+  if (disposed || !viewActive) return;
+  if (!hdAllowed()) return;
+  if (typeof IntersectionObserver === 'undefined') return;
+  const root = wallEl.value;
+  if (!root) return;
+  hdObserver = new IntersectionObserver(onHdVisible, { rootMargin: '300px 0px' });
+  root.querySelectorAll<HTMLElement>('img[data-hd-url]').forEach((el) => {
+    if (el.dataset.hdUrl) hdObserver?.observe(el);
+  });
+}
+
+function teardownHdObserver(): void {
+  if (hdObserver) {
+    hdObserver.disconnect();
+    hdObserver = null;
+  }
+}
+
+/** 墙就绪/换班后重新观察(DOM 换了一批卡片) */
+function refreshHdObserver(): void {
+  void nextTick().then(() => {
+    if (disposed || !viewActive) return;
+    setupHdObserver();
+    void hdPump();
+  });
 }
 
 /** 每行渲染几份内容(偶数):保证滚动周期覆盖视口,否则回卷点不可达 */
@@ -870,6 +1028,18 @@ function onVisibilityChange() {
   scheduleRotate();
   // 流动循环在后台会自己停摆,回前台要重新起
   startFlow();
+  // 回前台:继续升级原画(后台暂停的队列)
+  refreshHdObserver();
+}
+
+/** 网络状况变化(开了省流模式/换到 2G)→ 立刻停/启升级原画 */
+function onConnectionChange() {
+  if (!hdAllowed()) {
+    teardownHdObserver();
+    hdQueue.length = 0;
+    return;
+  }
+  refreshHdObserver();
 }
 
 /** 系统「减少动态效果」开关变化 → 立刻停/启轮换与流动 */
@@ -911,6 +1081,9 @@ function addListeners(): void {
   window.addEventListener('resize', onResize);
   window.addEventListener('resize', onViewportResize);
   document.addEventListener('visibilitychange', onVisibilityChange);
+  // 网络状况变化(Chromium/Android):开了省流模式就别再升级原画
+  const conn = hdConnection() as (ConnInfo & { addEventListener?: (t: string, cb: () => void) => void }) | null;
+  conn?.addEventListener?.('change', onConnectionChange);
 }
 
 function removeListeners(): void {
@@ -919,6 +1092,8 @@ function removeListeners(): void {
   window.removeEventListener('resize', onResize);
   window.removeEventListener('resize', onViewportResize);
   document.removeEventListener('visibilitychange', onVisibilityChange);
+  const conn = hdConnection() as (ConnInfo & { removeEventListener?: (t: string, cb: () => void) => void }) | null;
+  conn?.removeEventListener?.('change', onConnectionChange);
 }
 
 function resetTouchState() {
@@ -984,6 +1159,8 @@ onDeactivated(() => {
   if (rotateTimer) { clearTimeout(rotateTimer); rotateTimer = null; }
   rotationPlan = null;
   removeListeners();
+  // 不在后台偷偷下原图
+  teardownHdObserver();
 });
 
 /* KeepAlive 激活(回到主页):恢复流动与轮换 */
@@ -994,6 +1171,8 @@ onActivated(() => {
   onViewportResize();
   startFlow();
   scheduleRotate();
+  // 回到主页:继续升级原画
+  refreshHdObserver();
 });
 
 onUnmounted(() => {
@@ -1003,6 +1182,9 @@ onUnmounted(() => {
   imgFallback.dispose();
   removeListeners();
   unwatchMotionPref();
+  teardownHdObserver();
+  hdQueue.length = 0;
+  hdTried.clear();
   if (safetyTimer) clearTimeout(safetyTimer);
   if (splashTimer) { clearTimeout(splashTimer); splashTimer = null; }
   if (pendingReadyTimer) { clearTimeout(pendingReadyTimer); pendingReadyTimer = null; }
@@ -1018,7 +1200,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main class="wall" :class="{ ready: allLoaded, swapping }" aria-label="流动图片墙">
+  <main ref="wallEl" class="wall" :class="{ ready: allLoaded, swapping }" aria-label="流动图片墙">
     <!-- 开屏遮罩(v2.5):名单请求与图片下载全程藏在遮罩后,墙就绪即整幕淡出揭幕
      * ⚠ 不用 <transition>:Vue 过渡靠 rAF 推进,浏览器挂起 rAF 时遮罩会永远
      *   停在 leave-from(不透明),把整墙盖死 → 表现为「一片空白」。改类名 + 定时器 -->
@@ -1058,10 +1240,11 @@ onUnmounted(() => {
         >
           <div class="img-box" :class="orientClass(item.img.url)">
             <img
-              :src="srcOverrides.get(item.img.url) ?? item.img.thumb"
+              :src="cardSrc(item.img)"
               :alt="item.img.name || '图片'"
               :style="focalStyle(item.img.url)"
               :class="{ 'is-loaded': loadedUrls.has(item.img.url) }"
+              :data-hd-url="item.img.url"
               loading="eager"
               decoding="async"
               @load="onImgDone(item.img)"
