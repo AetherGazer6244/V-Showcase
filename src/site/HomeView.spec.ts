@@ -182,6 +182,88 @@ describe('HomeView 真滚动(v2.15)', () => {
 });
 
 /* ============================================================
+ * 闲时升级原画(v2.17)
+ * ------------------------------------------------------------
+ * 墙先用 600w 缩略图开屏;卡片真正进入视口后,后台预载原图,
+ * 载好即把 src 换成原图(原图进缓存,换图不闪)。
+ * jsdom 没有 IntersectionObserver,也不会真下载图片 → 两者都打桩。
+ * ============================================================ */
+describe('HomeView 闲时升级原画(v2.17)', () => {
+  const origIO = (globalThis as { IntersectionObserver?: unknown }).IntersectionObserver;
+  const origImage = (globalThis as { Image?: unknown }).Image;
+
+  /** 假的 IntersectionObserver:记下被观察的元素,由测试手动触发 */
+  let ioCallback: ((entries: unknown[]) => void) | null = null;
+  let observed: Element[] = [];
+
+  beforeEach(() => {
+    localStorage.clear();
+    const { settings } = useSettings();
+    settings.value = { ...defaultSettings(), autoRotate: false };
+    ioCallback = null;
+    observed = [];
+
+    (globalThis as { IntersectionObserver?: unknown }).IntersectionObserver = class {
+      constructor(cb: (entries: unknown[]) => void) { ioCallback = cb; }
+      observe(el: Element) { observed.push(el); }
+      unobserve() { /* noop */ }
+      disconnect() { observed = []; }
+    };
+
+    // 假的 Image:设置 src 后异步触发 onload(模拟原图预载成功)
+    (globalThis as { Image?: unknown }).Image = class {
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      private _src = '';
+      set src(v: string) {
+        this._src = v;
+        setTimeout(() => { if (this.onload) this.onload(); }, 0);
+      }
+      get src() { return this._src; }
+    };
+  });
+
+  afterEach(() => {
+    (globalThis as { IntersectionObserver?: unknown }).IntersectionObserver = origIO;
+    (globalThis as { Image?: unknown }).Image = origImage;
+    vi.restoreAllMocks();
+  });
+
+  async function mountReady() {
+    const wrapper = mount(HomeView);
+    await flushMicrotasks();
+    for (const img of wrapper.findAll('.card img')) await img.trigger('load');
+    await sleep(1000);   // 越过开屏最短时长 → 墙就绪 → 开始观察
+    return wrapper;
+  }
+
+  it('就绪后卡片进入视口 → 预载原图 → src 换成原图', async () => {
+    const wrapper = await mountReady();
+    const first = wrapper.find('.card img');
+    // 起初是 600w 缩略图(原图地址在 data-hd-url 上)
+    const origUrl = first.attributes('data-hd-url') as string;
+    expect(origUrl).toMatch(/^https:\/\/a\/\d+\.jpg$/);
+    expect(first.attributes('src')).not.toBe(origUrl);
+    expect(observed.length).toBeGreaterThan(0);
+
+    // 模拟「这张卡片进入视口」
+    ioCallback?.([{ isIntersecting: true, target: observed[0] }]);
+    await sleep(60);   // 等预载 + 响应式更新
+
+    expect(wrapper.find('.card img').attributes('src')).toBe(origUrl);
+    wrapper.unmount();
+  });
+
+  it('没进视口的卡片不会被升级(省流量)', async () => {
+    const wrapper = await mountReady();
+    const first = wrapper.find('.card img');
+    const origUrl = first.attributes('data-hd-url') as string;
+    expect(first.attributes('src')).not.toBe(origUrl);
+    wrapper.unmount();
+  });
+});
+
+/* ============================================================
  * 加载态提交兜底(2026-11 线上事故回归)
  * ------------------------------------------------------------
  * 事故:窗口被遮挡 / 节能模式下浏览器会挂起 requestAnimationFrame
